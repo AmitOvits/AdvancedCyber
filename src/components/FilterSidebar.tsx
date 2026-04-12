@@ -2,7 +2,6 @@ import { brands, categories, allSizes } from "@/data/products";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 
@@ -54,25 +53,25 @@ export function FilterSidebar({ filters, onChange, onClose }: FilterSidebarProps
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="font-heading text-xl text-foreground">Filters</h2>
+        <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Filters</h2>
         <div className="flex items-center gap-2">
           {hasFilters && (
-            <Button variant="ghost" size="sm" onClick={clearAll} className="text-muted-foreground">
+            <button onClick={clearAll} className="text-xs text-primary hover:underline">
               Clear all
-            </Button>
+            </button>
           )}
           {onClose && (
-            <Button variant="ghost" size="icon" onClick={onClose} className="lg:hidden">
+            <Button variant="ghost" size="icon" onClick={onClose} className="lg:hidden h-7 w-7">
               <X className="h-4 w-4" />
             </Button>
           )}
         </div>
       </div>
 
-      <Separator />
+      <div className="h-px bg-border" />
 
       <div>
-        <h3 className="font-semibold text-sm mb-3 text-foreground">Brand</h3>
+        <h3 className="font-semibold text-xs mb-3 text-muted-foreground uppercase tracking-wider">Brand</h3>
         <div className="space-y-2.5">
           {brands.map((brand) => (
             <div key={brand} className="flex items-center gap-2">
@@ -89,10 +88,10 @@ export function FilterSidebar({ filters, onChange, onClose }: FilterSidebarProps
         </div>
       </div>
 
-      <Separator />
+      <div className="h-px bg-border" />
 
       <div>
-        <h3 className="font-semibold text-sm mb-3 text-foreground">Category</h3>
+        <h3 className="font-semibold text-xs mb-3 text-muted-foreground uppercase tracking-wider">Category</h3>
         <div className="space-y-2.5">
           {categories.map((cat) => (
             <div key={cat} className="flex items-center gap-2">
@@ -109,10 +108,10 @@ export function FilterSidebar({ filters, onChange, onClose }: FilterSidebarProps
         </div>
       </div>
 
-      <Separator />
+      <div className="h-px bg-border" />
 
       <div>
-        <h3 className="font-semibold text-sm mb-3 text-foreground">Price Range</h3>
+        <h3 className="font-semibold text-xs mb-3 text-muted-foreground uppercase tracking-wider">Price Range</h3>
         <Slider
           value={filters.priceRange}
           onValueChange={(val) => onChange({ ...filters, priceRange: val as [number, number] })}
@@ -127,19 +126,19 @@ export function FilterSidebar({ filters, onChange, onClose }: FilterSidebarProps
         </div>
       </div>
 
-      <Separator />
+      <div className="h-px bg-border" />
 
       <div>
-        <h3 className="font-semibold text-sm mb-3 text-foreground">Size</h3>
+        <h3 className="font-semibold text-xs mb-3 text-muted-foreground uppercase tracking-wider">Size</h3>
         <div className="flex flex-wrap gap-2">
           {allSizes.map((size) => (
             <button
               key={size}
               onClick={() => toggleSize(size)}
-              className={`px-2.5 py-1.5 text-xs rounded-md border transition-colors ${
+              className={`px-2.5 py-1.5 text-xs rounded-full border transition-all duration-200 ${
                 filters.sizes.includes(size)
                   ? "bg-primary text-primary-foreground border-primary"
-                  : "border-border text-muted-foreground hover:border-primary"
+                  : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
               }`}
             >
               {size}
