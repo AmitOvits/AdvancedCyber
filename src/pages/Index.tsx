@@ -4,7 +4,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { FilterSidebar, type Filters } from "@/components/FilterSidebar";
 import { Header } from "@/components/Header";
 import { CartDrawer } from "@/components/CartDrawer";
-import { CartProvider } from "@/context/CartContext";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -129,9 +129,5 @@ function ShopContent() {
 }
 
 export default function Index() {
-  return (
-    <CartProvider>
-      <ShopContent />
-    </CartProvider>
-  );
+  return <ShopContent />;
 }
