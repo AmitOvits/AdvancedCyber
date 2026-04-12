@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -23,13 +23,8 @@ export default function Auth() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
-    const { error } = isLogin
-      ? await signIn(email, password)
-      : await signUp(email, password);
-
+    const { error } = isLogin ? await signIn(email, password) : await signUp(email, password);
     setLoading(false);
-
     if (error) {
       toast.error(error.message);
     } else if (isLogin) {
@@ -42,22 +37,33 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <h1 className="font-heading text-3xl text-foreground mb-2">
-            SOLE<span className="text-primary">.</span>
-          </h1>
-          <CardTitle className="font-body text-xl">
-            {isLogin ? "Welcome back" : "Create an account"}
-          </CardTitle>
-          <CardDescription>
-            {isLogin ? "Sign in to your account" : "Join SOLE. today"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-sm"
+      >
+        <div className="text-center mb-8">
+          <Link to="/">
+            <h1 className="text-2xl font-black tracking-tight text-foreground uppercase">
+              Sole<span className="text-primary">.</span>
+            </h1>
+          </Link>
+        </div>
+
+        <div className="glass rounded-2xl p-8 space-y-6">
+          <div className="text-center space-y-1">
+            <h2 className="text-xl font-bold text-foreground">
+              {isLogin ? "Welcome back" : "Create account"}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {isLogin ? "Sign in to continue" : "Join SOLE. today"}
+            </p>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -65,10 +71,11 @@ export default function Auth() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="rounded-xl bg-accent border-border h-11"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -77,23 +84,25 @@ export default function Auth() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
+                className="rounded-xl bg-accent border-border h-11"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full rounded-full font-semibold h-11" disabled={loading}>
               {loading ? "Loading..." : isLogin ? "Sign In" : "Create Account"}
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm">
+
+          <div className="text-center">
             <button
               type="button"
-              className="text-primary hover:underline"
+              className="text-sm text-primary hover:underline"
               onClick={() => setIsLogin(!isLogin)}
             >
               {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
             </button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </motion.div>
     </div>
   );
 }
