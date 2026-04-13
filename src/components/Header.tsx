@@ -44,9 +44,9 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
           <nav className="hidden lg:flex items-center gap-8 text-sm font-medium">
             <Link to="/" className="text-foreground hover:text-primary transition-colors">Shop</Link>
-            <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">New Arrivals</a>
-            <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Brands</a>
-            <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">About</a>
+            <Link to="/new-arrivals" className="text-muted-foreground hover:text-foreground transition-colors">New Arrivals</Link>
+            <Link to="/brands" className="text-muted-foreground hover:text-foreground transition-colors">Brands</Link>
+            <Link to="/about" className="text-muted-foreground hover:text-foreground transition-colors">About</Link>
           </nav>
 
           <div className="flex items-center gap-1">
@@ -109,9 +109,9 @@ export function Header({ onToggleSidebar }: HeaderProps) {
             <nav className="flex flex-col p-4 gap-1">
               {[
                 { label: "Shop", href: "/" },
-                { label: "New Arrivals", href: "#" },
-                { label: "Brands", href: "#" },
-                { label: "About", href: "#" },
+                { label: "New Arrivals", href: "/new-arrivals" },
+                { label: "Brands", href: "/brands" },
+                { label: "About", href: "/about" },
               ].map((item) => (
                 <Link
                   key={item.label}
