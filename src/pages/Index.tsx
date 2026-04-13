@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { SlidersHorizontal, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 const defaultFilters: Filters = {
   brands: [],
@@ -40,11 +41,11 @@ function HeroSection() {
             Discover premium sneakers crafted for performance and style. Curated from the world's top brands.
           </p>
           <div className="flex gap-3">
-            <Button size="lg" className="rounded-full px-8 font-semibold h-12">
-              Shop Now <ArrowRight className="ml-2 h-4 w-4" />
+            <Button size="lg" className="rounded-full px-8 font-semibold h-12" asChild>
+              <a href="#products">Shop Now <ArrowRight className="ml-2 h-4 w-4" /></a>
             </Button>
-            <Button size="lg" variant="outline" className="rounded-full px-8 font-semibold h-12 border-border">
-              View Lookbook
+            <Button size="lg" variant="outline" className="rounded-full px-8 font-semibold h-12 border-border" asChild>
+              <Link to="/collections">View Lookbook</Link>
             </Button>
           </div>
         </motion.div>
@@ -108,7 +109,7 @@ function ShopContent() {
       <div className="max-w-7xl mx-auto px-4 lg:px-8 py-6">
         <HeroSection />
 
-        <div className="flex gap-8">
+        <div id="products" className="flex gap-8">
           {/* Desktop Sidebar */}
           <aside className="hidden lg:block w-64 shrink-0">
             <div className="sticky top-24 glass rounded-2xl p-6">
