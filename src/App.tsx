@@ -14,6 +14,7 @@ import About from "./pages/About.tsx";
 import Collections from "./pages/Collections.tsx";
 import Checkout from "./pages/Checkout.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import { AiShoeExpertWidget } from "@/components/AiShoeExpertWidget";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <AiShoeExpertWidget />
       <BrowserRouter>
         <AuthProvider>
           <CartProvider>

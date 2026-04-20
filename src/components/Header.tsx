@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ShoppingBag, Menu, User, LogOut, Shield, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { TrainingModeBanner } from "@/components/TrainingModeBanner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +25,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
   return (
     <>
+      <TrainingModeBanner />
       <header className="sticky top-0 z-40 glass-strong">
         <div className="max-w-7xl mx-auto flex items-center justify-between h-16 px-4 lg:px-8">
           <div className="flex items-center gap-3">

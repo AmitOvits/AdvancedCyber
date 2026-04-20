@@ -1,0 +1,60 @@
+"""
+Central Gemini configuration for this project.
+
+We use Google's OpenAI-compatible endpoint, so we can call Gemini via the OpenAI SDK.
+
+This file is the single source of truth for:
+- API base URL
+- Model ID
+- Client creation (reads ORCHESTRATION_KEY_BIG_DATA)
+
+"""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+
+from openai import OpenAI
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Google Gemini OpenAI-compatible endpoint (AI Studio key).
+DEFAULT_GEMINI_OPENAI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
+# Default model used across the entire project.
+# We pick a model family that is widely supported on the Gemini OpenAI-compatible endpoint.
+# If you get 404 NOT_FOUND for the model, try:
+# - "gemini-2.0-flash-lite"
+# - "gemini-2.0-flash-lite-001"
+DEFAULT_GEMINI_CHAT_MODEL = "gemini-2.5-flash-lite"
+
+
+@dataclass(frozen=True)
+class GeminiSettings:
+    api_key: str
+    base_url: str
+    model: str
+
+
+def get_gemini_settings() -> GeminiSettings:
+    api_key = os.getenv("ORCHESTRATION_KEY_BIG_DATA") or ""
+    if not api_key:
+        raise ValueError("Missing ORCHESTRATION_KEY_BIG_DATA environment variable")
+
+    base_url = os.getenv("GEMINI_OPENAI_BASE_URL") or DEFAULT_GEMINI_OPENAI_BASE_URL
+    model = os.getenv("GEMINI_CHAT_MODEL") or DEFAULT_GEMINI_CHAT_MODEL
+    return GeminiSettings(api_key=api_key, base_url=base_url, model=model)
+
+
+def get_gemini_client() -> OpenAI:
+    s = get_gemini_settings()
+    return OpenAI(api_key=s.api_key, base_url=s.base_url)
+
+
+# Backwards-compatible constants used across the repo.
+_s = get_gemini_settings()
+GEMINI_OPENAI_BASE_URL = _s.base_url
+GEMINI_CHAT_MODEL = _s.model
