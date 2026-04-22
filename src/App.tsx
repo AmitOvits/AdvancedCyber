@@ -14,6 +14,7 @@ import About from "./pages/About.tsx";
 import Reviews from "./pages/Reviews.tsx";
 import Collections from "./pages/Collections.tsx";
 import Checkout from "./pages/Checkout.tsx";
+import { OrderDetailPage, OrdersPage } from "./pages/Orders.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { AiShoeExpertWidget } from "@/components/AiShoeExpertWidget";
 
@@ -36,6 +37,8 @@ const App = () => (
               <Route path="/reviews" element={<Reviews />} />
               <Route path="/collections" element={<Collections />} />
               <Route path="/checkout" element={<Checkout />} />
+              <Route path="/orders" element={<OrdersPage />} />
+              <Route path="/orders/:orderNumber" element={<OrderDetailPage />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/admin" element={<Admin />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

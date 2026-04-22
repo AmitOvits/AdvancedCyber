@@ -14,6 +14,34 @@ function asError(error: unknown) {
   return error instanceof Error ? error : new Error("Unexpected authentication error.");
 }
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutValue: T): Promise<T> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const timer = window.setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        resolve(timeoutValue);
+      }
+    }, timeoutMs);
+
+    promise
+      .then((value) => {
+        if (!settled) {
+          settled = true;
+          window.clearTimeout(timer);
+          resolve(value);
+        }
+      })
+      .catch(() => {
+        if (!settled) {
+          settled = true;
+          window.clearTimeout(timer);
+          resolve(timeoutValue);
+        }
+      });
+  });
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -39,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const admin = await checkAdminRole(nextUser.id);
+        const admin = await withTimeout(checkAdminRole(nextUser.id), 4000, false);
 
         if (isMounted) {
           setIsAdmin(admin);
