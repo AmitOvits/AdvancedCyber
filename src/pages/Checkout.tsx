@@ -10,7 +10,15 @@ import { motion } from "framer-motion";
 import { ShoppingBag, CreditCard, MapPin, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { createOrderWithItems } from "@/features/orders/api";
+
+async function readCheckoutError(response: Response) {
+  try {
+    const payload = (await response.json()) as { error?: string };
+    return payload.error ?? `Checkout failed with status ${response.status}.`;
+  } catch {
+    return `Checkout failed with status ${response.status}.`;
+  }
+}
 
 export default function Checkout() {
   const { items, clearCart } = useCart();
@@ -71,8 +79,6 @@ export default function Checkout() {
     );
   }
 
-  // INTENTIONAL VULNERABILITY: Client-side total sent to server
-  // The total is calculated here and can be manipulated via devtools/interceptor
   const clientTotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
 
   const handlePlaceOrder = async () => {
@@ -87,19 +93,21 @@ export default function Checkout() {
 
     setLoading(true);
     try {
-      // VULNERABILITY: total comes from client, not recalculated server-side
-      await createOrderWithItems({
-        userId: user?.id || null,
-        total: clientTotal, // <-- price manipulation: editable in devtools
-        shippingAddress: shipping,
-        items: items.map((item) => ({
-          productId: item.product.id,
-          productName: item.product.name,
-          size: item.size,
-          quantity: item.quantity,
-          price: item.product.price, // individual price also from client
-        })),
+      const response = await fetch("http://localhost:3001/api/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          shipping,
+          payment,
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error(await readCheckoutError(response));
+      }
 
       clearCart();
       setOrderPlaced(true);
@@ -223,9 +231,6 @@ export default function Checkout() {
                   <span>Shipping</span>
                   <span>Free</span>
                 </div>
-                {/* VULNERABILITY: This total is editable via JS console: 
-                    document.querySelector('[data-total]').dataset.total = '0.01' 
-                    won't work directly but the clientTotal var is manipulable */}
                 <div className="flex justify-between text-lg font-black text-foreground pt-2 border-t border-border" data-total={clientTotal}>
                   <span>Total</span>
                   <span>${clientTotal.toFixed(2)}</span>
