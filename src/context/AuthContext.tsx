@@ -8,7 +8,7 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   signUp: (email: string, username: string, password: string) => Promise<{ error: Error | null }>;
-  signIn: (username: string, password: string) => Promise<{ error: Error | null }>;
+  signIn: (identifier: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -54,11 +54,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const upsertProfile = async (userId: string, email: string, username: string) => {
+    const { error } = await supabase.from("profiles").upsert(
+      {
+        id: userId,
+        email,
+        username,
+      },
+      { onConflict: "id" },
+    );
+
+    if (error) throw error;
+  };
+
   const signUp = async (email: string, username: string, password: string) => {
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedUsername = username.trim().toLowerCase();
 
-    const { error } = await supabase.auth.signUp({
+    if (!normalizedEmail || !normalizedUsername || !password.trim()) {
+      return { error: new Error("Email, username, and password are required.") };
+    }
+
+    const { data: existingProfile, error: existingProfileError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("username", normalizedUsername)
+      .maybeSingle();
+
+    if (existingProfileError) {
+      return { error: existingProfileError as Error };
+    }
+
+    if (existingProfile) {
+      return { error: new Error("That username is already taken.") };
+    }
+
+    const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
       options: {
@@ -67,27 +98,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       },
     });
-    return { error: error as Error | null };
-  };
 
-  const signIn = async (username: string, password: string) => {
-    const normalizedUsername = username.trim().toLowerCase();
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("email")
-      .eq("username", normalizedUsername)
-      .maybeSingle();
-
-    if (profileError) {
-      return { error: profileError as Error };
+    if (error) {
+      return { error: error as Error | null };
     }
 
-    if (!profile?.email) {
-      return { error: new Error("Username not found.") };
+    if (data.user?.id) {
+      try {
+        await upsertProfile(data.user.id, normalizedEmail, normalizedUsername);
+      } catch (profileError) {
+        return { error: profileError as Error };
+      }
+    }
+
+    return { error: null };
+  };
+
+  const signIn = async (identifier: string, password: string) => {
+    const normalizedIdentifier = identifier.trim().toLowerCase();
+
+    if (!normalizedIdentifier || !password.trim()) {
+      return { error: new Error("Username/email and password are required.") };
+    }
+
+    let email = normalizedIdentifier;
+
+    if (!normalizedIdentifier.includes("@")) {
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("username", normalizedIdentifier)
+        .maybeSingle();
+
+      if (profileError) {
+        return { error: profileError as Error };
+      }
+
+      if (!profile?.email) {
+        return { error: new Error("Username not found.") };
+      }
+
+      email = profile.email;
     }
 
     const { error } = await supabase.auth.signInWithPassword({
-      email: profile.email,
+      email,
       password,
     });
     return { error: error as Error | null };

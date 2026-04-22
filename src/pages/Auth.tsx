@@ -13,7 +13,7 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,6 +38,14 @@ export default function Auth() {
       toast.success("Account created! Check your email to confirm.");
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4 text-muted-foreground">
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -71,7 +79,7 @@ export default function Auth() {
               <Input
                 id="username"
                 type="text"
-                placeholder="yourusername"
+                placeholder={isLogin ? "username or email" : "yourusername"}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
