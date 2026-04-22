@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/features/auth";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, Menu, User, LogOut, Shield, X } from "lucide-react";
+import { ShoppingBag, Menu, User, LogOut, Shield, X, Receipt } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { TrainingModeBanner } from "@/components/TrainingModeBanner";
@@ -84,6 +84,11 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                   {isAdmin && (
                     <DropdownMenuItem asChild>
                       <Link to="/admin" className="gap-2"><Shield className="h-4 w-4" />Admin</Link>
+                    </DropdownMenuItem>
+                  )}
+                  {!isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/orders" className="gap-2"><Receipt className="h-4 w-4" />My Orders</Link>
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem onClick={signOut} className="gap-2 text-destructive">
