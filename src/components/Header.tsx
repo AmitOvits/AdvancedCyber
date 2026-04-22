@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/features/auth";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, Menu, User, LogOut, Shield, X } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -48,6 +48,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
             <Link to="/" className="text-foreground hover:text-primary transition-colors">Shop</Link>
             <Link to="/new-arrivals" className="text-muted-foreground hover:text-foreground transition-colors">New Arrivals</Link>
             <Link to="/brands" className="text-muted-foreground hover:text-foreground transition-colors">Brands</Link>
+            <Link to="/reviews" className="text-muted-foreground hover:text-foreground transition-colors">Reviews</Link>
             <Link to="/about" className="text-muted-foreground hover:text-foreground transition-colors">About</Link>
           </nav>
 
@@ -113,6 +114,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                 { label: "Shop", href: "/" },
                 { label: "New Arrivals", href: "/new-arrivals" },
                 { label: "Brands", href: "/brands" },
+                { label: "Reviews", href: "/reviews" },
                 { label: "About", href: "/about" },
               ].map((item) => (
                 <Link

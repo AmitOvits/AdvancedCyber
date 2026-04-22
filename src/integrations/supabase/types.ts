@@ -200,6 +200,39 @@ export interface Database {
         };
         Relationships: [];
       };
+      store_reviews: {
+        Row: {
+          author_name: string;
+          body: string;
+          created_at: string;
+          id: string;
+          is_featured: boolean;
+          rating: number;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          author_name: string;
+          body: string;
+          created_at?: string;
+          id?: string;
+          is_featured?: boolean;
+          rating?: number;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          author_name?: string;
+          body?: string;
+          created_at?: string;
+          id?: string;
+          is_featured?: boolean;
+          rating?: number;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       products: {
         Row: {
           brand: string;

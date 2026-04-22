@@ -1,19 +1,19 @@
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/features/auth";
 import { Header } from "@/components/Header";
 import { CartDrawer } from "@/components/CartDrawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { ShoppingBag, CreditCard, MapPin, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { createOrderWithItems } from "@/features/orders/api";
 
 export default function Checkout() {
-  const { items, totalPrice, clearCart } = useCart();
+  const { items, clearCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -88,36 +88,25 @@ export default function Checkout() {
     setLoading(true);
     try {
       // VULNERABILITY: total comes from client, not recalculated server-side
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          user_id: user?.id || null,
-          total: clientTotal, // <-- price manipulation: editable in devtools
-          status: "pending",
-          shipping_address: shipping as any,
-        })
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      const orderItems = items.map((item) => ({
-        order_id: order.id,
-        product_id: item.product.id,
-        product_name: item.product.name,
-        size: item.size,
-        quantity: item.quantity,
-        price: item.product.price, // individual price also from client
-      }));
-
-      const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
-      if (itemsError) throw itemsError;
+      await createOrderWithItems({
+        userId: user?.id || null,
+        total: clientTotal, // <-- price manipulation: editable in devtools
+        shippingAddress: shipping,
+        items: items.map((item) => ({
+          productId: item.product.id,
+          productName: item.product.name,
+          size: item.size,
+          quantity: item.quantity,
+          price: item.product.price, // individual price also from client
+        })),
+      });
 
       clearCart();
       setOrderPlaced(true);
       toast.success("Order placed successfully!");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to place order");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to place order";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
