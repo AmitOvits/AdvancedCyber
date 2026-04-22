@@ -1,3 +1,7 @@
+-- Mirror of the current project schema.
+-- Make app-level schema changes in `supabase/migrations/20260421000000_initial_schema.sql` first,
+-- then sync this file intentionally if you want a checked-in schema snapshot.
+
 create extension if not exists pgcrypto;
 
 create or replace function public.set_updated_at()
@@ -203,6 +207,24 @@ create index if not exists idx_products_brand on public.products (brand);
 create index if not exists idx_products_category on public.products (category);
 create index if not exists idx_products_created_at on public.products (created_at desc);
 
+create table if not exists public.store_reviews (
+  id uuid primary key default gen_random_uuid(),
+  author_name text not null,
+  rating numeric(2, 1) not null default 5,
+  title text not null,
+  body text not null,
+  is_featured boolean not null default false,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  constraint store_reviews_author_name_nonempty check (char_length(btrim(author_name)) > 0),
+  constraint store_reviews_title_nonempty check (char_length(btrim(title)) > 0),
+  constraint store_reviews_body_nonempty check (char_length(btrim(body)) > 0),
+  constraint store_reviews_rating_check check (rating >= 1 and rating <= 5)
+);
+
+create index if not exists idx_store_reviews_created_at on public.store_reviews (created_at desc);
+create index if not exists idx_store_reviews_featured on public.store_reviews (is_featured, created_at desc);
+
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete set null,
@@ -247,6 +269,12 @@ execute function public.set_updated_at();
 drop trigger if exists handle_products_updated_at on public.products;
 create trigger handle_products_updated_at
 before update on public.products
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists handle_store_reviews_updated_at on public.store_reviews;
+create trigger handle_store_reviews_updated_at
+before update on public.store_reviews
 for each row
 execute function public.set_updated_at();
 

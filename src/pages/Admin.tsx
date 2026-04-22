@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/features/auth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,10 +13,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Link, Navigate } from "react-router-dom";
 import { Package, ShoppingCart, Plus, ArrowLeft } from "lucide-react";
-import type { Database } from "@/integrations/supabase/types";
-
-type ProductRow = Database["public"]["Tables"]["products"]["Row"];
-type ProductInsert = Database["public"]["Tables"]["products"]["Insert"];
+import {
+  createProduct,
+  deleteProduct,
+  fetchProductRows,
+  type ProductInsert,
+  type ProductRow,
+} from "@/features/products/api";
+import { fetchOrders, updateOrderStatus } from "@/features/orders/api";
 
 export default function Admin() {
   const { isAdmin, loading, user } = useAuth();
@@ -66,18 +69,11 @@ function ProductsTab() {
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["admin-products"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });
-      if (error) throw error;
-      return data as ProductRow[];
-    },
+    queryFn: fetchProductRows,
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("products").delete().eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: deleteProduct,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
       toast.success("Product deleted");
@@ -139,7 +135,7 @@ function AddProductForm({ onSuccess }: { onSuccess: () => void }) {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("products").insert({
+      await createProduct({
         name: form.name!,
         brand: form.brand!,
         price: form.price!,
@@ -151,7 +147,6 @@ function AddProductForm({ onSuccess }: { onSuccess: () => void }) {
         sizes: form.sizes || [],
         is_new: form.is_new || false,
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Product added!");
@@ -187,19 +182,14 @@ function AddProductForm({ onSuccess }: { onSuccess: () => void }) {
 function OrdersTab() {
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["admin-orders"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
+    queryFn: fetchOrders,
   });
 
   const queryClient = useQueryClient();
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase.from("orders").update({ status }).eq("id", id);
-      if (error) throw error;
+      await updateOrderStatus(id, status);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });

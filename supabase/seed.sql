@@ -1,3 +1,6 @@
+-- Source of truth for demo users and initial app data.
+-- Keep SQL-seeded `auth.users` / `auth.identities` rows and storefront demo records in this file.
+
 -- Test accounts created in Supabase Auth.
 -- Admin login:    admin@sole.local / Admin123!
 -- Customer login: shopper@sole.local / Shopper123!
@@ -303,6 +306,62 @@ set
   rating = excluded.rating,
   reviews = excluded.reviews,
   is_new = excluded.is_new,
+  updated_at = timezone('utc', now());
+
+insert into public.store_reviews (
+  id,
+  author_name,
+  rating,
+  title,
+  body,
+  is_featured,
+  created_at
+)
+values
+  (
+    '99999999-9999-9999-9999-999999999991',
+    'soleadmin',
+    5.0,
+    'Trusted quality every time',
+    'We built Sole to focus on authentic pairs, fast support, and a storefront that feels premium from the first click to delivery.',
+    true,
+    timezone('utc', now()) - interval '10 days'
+  ),
+  (
+    '99999999-9999-9999-9999-999999999992',
+    'Maya Brooks',
+    4.8,
+    'Fast shipping and great packaging',
+    'My order arrived earlier than expected and the sneakers were packed perfectly. The whole checkout flow was smooth.',
+    true,
+    timezone('utc', now()) - interval '6 days'
+  ),
+  (
+    '99999999-9999-9999-9999-999999999993',
+    'Jordan Lee',
+    4.7,
+    'Best sneaker store UX',
+    'Filtering by size and brand was quick, and I found exactly what I wanted without digging through cluttered pages.',
+    false,
+    timezone('utc', now()) - interval '4 days'
+  ),
+  (
+    '99999999-9999-9999-9999-999999999994',
+    'Avery Stone',
+    4.9,
+    'Premium feel from start to finish',
+    'The catalog feels curated, the product details are clear, and customer support answered my question in minutes.',
+    false,
+    timezone('utc', now()) - interval '2 days'
+  )
+on conflict (id) do update
+set
+  author_name = excluded.author_name,
+  rating = excluded.rating,
+  title = excluded.title,
+  body = excluded.body,
+  is_featured = excluded.is_featured,
+  created_at = excluded.created_at,
   updated_at = timezone('utc', now());
 
 -- Guest checkout examples used by the admin orders tab.

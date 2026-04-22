@@ -4,9 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "npm run dev:lab",
+    "dev:client": "vite",
     "dev:server": "cross-env NODE_ENV=development node --watch server/index.js",
-    "dev:lab": "concurrently -n server,client -c cyan,magenta \"npm run dev:server\" \"npm run dev\"",
+    "dev:lab": "concurrently -n server,client -c cyan,magenta \"npm run dev:server\" \"npm run dev:client\"",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",

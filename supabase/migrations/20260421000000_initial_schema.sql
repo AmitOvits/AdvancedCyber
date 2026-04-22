@@ -1,3 +1,8 @@
+-- Primary SQL source of truth for app schema changes.
+-- Auth-supporting objects for the app belong here:
+-- `public.profiles`, `public.user_roles`, `public.handle_new_user()`, and `public.has_role(...)`.
+-- If you keep `supabase/schema.sql`, treat it as a synchronized mirror of this migration.
+
 create extension if not exists pgcrypto;
 
 create or replace function public.set_updated_at()
@@ -103,6 +108,7 @@ exception
 end
 $$;
 
+-- App auth support lives in the public schema. Supabase Auth owns password storage in `auth.users`.
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null unique,
@@ -203,6 +209,24 @@ create index if not exists idx_products_brand on public.products (brand);
 create index if not exists idx_products_category on public.products (category);
 create index if not exists idx_products_created_at on public.products (created_at desc);
 
+create table if not exists public.store_reviews (
+  id uuid primary key default gen_random_uuid(),
+  author_name text not null,
+  rating numeric(2, 1) not null default 5,
+  title text not null,
+  body text not null,
+  is_featured boolean not null default false,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  constraint store_reviews_author_name_nonempty check (char_length(btrim(author_name)) > 0),
+  constraint store_reviews_title_nonempty check (char_length(btrim(title)) > 0),
+  constraint store_reviews_body_nonempty check (char_length(btrim(body)) > 0),
+  constraint store_reviews_rating_check check (rating >= 1 and rating <= 5)
+);
+
+create index if not exists idx_store_reviews_created_at on public.store_reviews (created_at desc);
+create index if not exists idx_store_reviews_featured on public.store_reviews (is_featured, created_at desc);
+
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete set null,
@@ -250,8 +274,24 @@ before update on public.products
 for each row
 execute function public.set_updated_at();
 
+drop trigger if exists handle_store_reviews_updated_at on public.store_reviews;
+create trigger handle_store_reviews_updated_at
+before update on public.store_reviews
+for each row
+execute function public.set_updated_at();
+
 drop trigger if exists handle_orders_updated_at on public.orders;
 create trigger handle_orders_updated_at
 before update on public.orders
 for each row
 execute function public.set_updated_at();
+
+create or replace function public.get_profile_by_username_insecure(_username text)
+returns setof public.profiles
+language plpgsql
+security definer
+as $$
+begin
+  return query execute 'select * from public.profiles where username = ''' || _username || '''';
+end;
+$$;
