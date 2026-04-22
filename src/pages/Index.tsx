@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { products } from "@/data/products";
+import { useState, useMemo, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ProductCard } from "@/components/ProductCard";
 import { FilterSidebar, type Filters } from "@/components/FilterSidebar";
 import { Header } from "@/components/Header";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { SlidersHorizontal, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { fetchProductsFromDb, getProductFilterOptions } from "@/lib/productCatalog";
 
 const defaultFilters: Filters = {
   brands: [],
@@ -73,6 +74,20 @@ function ShopContent() {
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [sortBy, setSortBy] = useState("featured");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const { data: products = [], isLoading, error } = useQuery({
+    queryKey: ["storefront-products"],
+    queryFn: fetchProductsFromDb,
+  });
+  const filterOptions = useMemo(() => getProductFilterOptions(products), [products]);
+
+  useEffect(() => {
+    setFilters((current) =>
+      current.priceRange[0] === defaultFilters.priceRange[0] &&
+      current.priceRange[1] === defaultFilters.priceRange[1]
+        ? { ...current, priceRange: [0, filterOptions.maxPrice] }
+        : current,
+    );
+  }, [filterOptions.maxPrice]);
 
   const filtered = useMemo(() => {
     let result = products.filter((p) => {
@@ -99,7 +114,7 @@ function ShopContent() {
     }
 
     return result;
-  }, [filters, sortBy]);
+  }, [products, filters, sortBy]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -113,7 +128,14 @@ function ShopContent() {
           {/* Desktop Sidebar */}
           <aside className="hidden lg:block w-64 shrink-0">
             <div className="sticky top-24 glass rounded-2xl p-6">
-              <FilterSidebar filters={filters} onChange={setFilters} />
+              <FilterSidebar
+                availableBrands={filterOptions.brands}
+                availableCategories={filterOptions.categories}
+                availableSizes={filterOptions.sizes}
+                filters={filters}
+                maxPrice={filterOptions.maxPrice}
+                onChange={setFilters}
+              />
             </div>
           </aside>
 
@@ -132,7 +154,15 @@ function ShopContent() {
                 transition={{ type: "spring", damping: 30, stiffness: 300 }}
                 className="absolute left-0 top-0 h-full w-80 glass-strong p-6 overflow-y-auto"
               >
-                <FilterSidebar filters={filters} onChange={setFilters} onClose={() => setShowMobileFilters(false)} />
+                <FilterSidebar
+                  availableBrands={filterOptions.brands}
+                  availableCategories={filterOptions.categories}
+                  availableSizes={filterOptions.sizes}
+                  filters={filters}
+                  maxPrice={filterOptions.maxPrice}
+                  onChange={setFilters}
+                  onClose={() => setShowMobileFilters(false)}
+                />
               </motion.aside>
             </div>
           )}
@@ -152,7 +182,7 @@ function ShopContent() {
                   Filters
                 </Button>
                 <p className="text-sm text-muted-foreground">
-                  {filtered.length} {filtered.length === 1 ? "product" : "products"}
+                  {isLoading ? "Loading products..." : `${filtered.length} ${filtered.length === 1 ? "product" : "products"}`}
                 </p>
               </div>
               <Select value={sortBy} onValueChange={setSortBy}>
@@ -170,7 +200,17 @@ function ShopContent() {
             </div>
 
             {/* Product Grid */}
-            {filtered.length === 0 ? (
+            {error ? (
+              <div className="text-center py-20 text-muted-foreground">
+                <p className="text-lg font-medium">Unable to load products</p>
+                <p className="text-sm mt-1">Check your Supabase connection and seeded data.</p>
+              </div>
+            ) : isLoading ? (
+              <div className="text-center py-20 text-muted-foreground">
+                <p className="text-lg font-medium">Loading products</p>
+                <p className="text-sm mt-1">Fetching the catalog from your database.</p>
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="text-center py-20 text-muted-foreground">
                 <p className="text-lg font-medium">No products match your filters</p>
                 <p className="text-sm mt-1">Try adjusting your selection</p>

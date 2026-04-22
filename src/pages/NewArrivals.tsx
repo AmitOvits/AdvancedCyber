@@ -1,10 +1,15 @@
-import { products } from "@/data/products";
+import { useQuery } from "@tanstack/react-query";
 import { ProductCard } from "@/components/ProductCard";
 import { Header } from "@/components/Header";
 import { CartDrawer } from "@/components/CartDrawer";
 import { motion } from "framer-motion";
+import { fetchProductsFromDb } from "@/lib/productCatalog";
 
 export default function NewArrivals() {
+  const { data: products = [], isLoading, error } = useQuery({
+    queryKey: ["new-arrivals-products"],
+    queryFn: fetchProductsFromDb,
+  });
   const newProducts = products.filter((p) => p.isNew);
 
   return (
@@ -25,7 +30,11 @@ export default function NewArrivals() {
           </p>
         </motion.div>
 
-        {newProducts.length === 0 ? (
+        {error ? (
+          <p className="text-muted-foreground text-center py-20">Unable to load products from the database.</p>
+        ) : isLoading ? (
+          <p className="text-muted-foreground text-center py-20">Loading new arrivals...</p>
+        ) : newProducts.length === 0 ? (
           <p className="text-muted-foreground text-center py-20">No new arrivals right now. Check back soon!</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">

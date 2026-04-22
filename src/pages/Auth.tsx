@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -9,21 +9,25 @@ import { motion } from "framer-motion";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
 
-  if (user) {
-    navigate("/");
-    return null;
-  }
+  useEffect(() => {
+    if (user) {
+      navigate("/");
+    }
+  }, [navigate, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = isLogin ? await signIn(email, password) : await signUp(email, password);
+    const { error } = isLogin
+      ? await signIn(username, password)
+      : await signUp(email, username, password);
     setLoading(false);
     if (error) {
       toast.error(error.message);
@@ -63,17 +67,31 @@ export default function Auth() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Email</Label>
+              <Label htmlFor="username" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Username</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="text"
+                placeholder="yourusername"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
                 className="rounded-xl bg-accent border-border h-11"
               />
             </div>
+            {!isLogin && (
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="rounded-xl bg-accent border-border h-11"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="password" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Password</Label>
               <Input
@@ -96,7 +114,12 @@ export default function Auth() {
             <button
               type="button"
               className="text-sm text-primary hover:underline"
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setUsername("");
+                setEmail("");
+                setPassword("");
+              }}
             >
               {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
             </button>

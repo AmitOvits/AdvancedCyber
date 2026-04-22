@@ -67,8 +67,6 @@ function v1RouterBypassingAuth() {
 }
 
 app.post("/api/ai-expert", async (req, res, next) => {
-  if (!trainingMode) return res.status(404).json({ error: "Not found" });
-
   try {
     const { message } = req.body ?? {};
     const reply = await getAiShoeExpertReply(message);

@@ -1,12 +1,10 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { isTrainingModeEnabled } from "@/lib/trainingMode";
 
 type ChatMessage = { role: "user" | "ai"; text: string };
 
 export function AiShoeExpertWidget() {
-  const enabled = isTrainingModeEnabled();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -15,8 +13,6 @@ export function AiShoeExpertWidget() {
   ]);
 
   const canSend = useMemo(() => draft.trim().length > 0 && !busy, [draft, busy]);
-
-  if (!enabled) return null;
 
   async function send() {
     const text = draft.trim();
@@ -33,7 +29,13 @@ export function AiShoeExpertWidget() {
         body: JSON.stringify({ message: text }),
       });
       const data = await res.json().catch(() => ({}));
-      const reply = typeof data?.reply === "string" ? data.reply : "Verified Expert Advice: (no response)";
+      const reply = res.ok
+        ? typeof data?.reply === "string"
+          ? data.reply
+          : "Verified Expert Advice: (no response)"
+        : typeof data?.error === "string"
+          ? `Verified Expert Advice: ${data.error}`
+          : "Verified Expert Advice: (request failed)";
       setMessages((m) => [...m, { role: "ai", text: reply }]);
     } catch {
       setMessages((m) => [...m, { role: "ai", text: "Verified Expert Advice: (network error)" }]);

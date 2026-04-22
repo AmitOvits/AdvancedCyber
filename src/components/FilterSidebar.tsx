@@ -1,4 +1,3 @@
-import { brands, categories, allSizes } from "@/data/products";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -13,12 +12,24 @@ export interface Filters {
 }
 
 interface FilterSidebarProps {
+  availableBrands: string[];
+  availableCategories: string[];
+  availableSizes: number[];
   filters: Filters;
+  maxPrice: number;
   onChange: (filters: Filters) => void;
   onClose?: () => void;
 }
 
-export function FilterSidebar({ filters, onChange, onClose }: FilterSidebarProps) {
+export function FilterSidebar({
+  availableBrands,
+  availableCategories,
+  availableSizes,
+  filters,
+  maxPrice,
+  onChange,
+  onClose,
+}: FilterSidebarProps) {
   const toggleBrand = (brand: string) => {
     const next = filters.brands.includes(brand)
       ? filters.brands.filter((b) => b !== brand)
@@ -41,14 +52,14 @@ export function FilterSidebar({ filters, onChange, onClose }: FilterSidebarProps
   };
 
   const clearAll = () =>
-    onChange({ brands: [], categories: [], sizes: [], priceRange: [0, 300] });
+    onChange({ brands: [], categories: [], sizes: [], priceRange: [0, maxPrice] });
 
   const hasFilters =
     filters.brands.length > 0 ||
     filters.categories.length > 0 ||
     filters.sizes.length > 0 ||
     filters.priceRange[0] > 0 ||
-    filters.priceRange[1] < 300;
+    filters.priceRange[1] < maxPrice;
 
   return (
     <div className="space-y-6">
@@ -73,7 +84,7 @@ export function FilterSidebar({ filters, onChange, onClose }: FilterSidebarProps
       <div>
         <h3 className="font-semibold text-xs mb-3 text-muted-foreground uppercase tracking-wider">Brand</h3>
         <div className="space-y-2.5">
-          {brands.map((brand) => (
+          {availableBrands.map((brand) => (
             <div key={brand} className="flex items-center gap-2">
               <Checkbox
                 id={`brand-${brand}`}
@@ -93,7 +104,7 @@ export function FilterSidebar({ filters, onChange, onClose }: FilterSidebarProps
       <div>
         <h3 className="font-semibold text-xs mb-3 text-muted-foreground uppercase tracking-wider">Category</h3>
         <div className="space-y-2.5">
-          {categories.map((cat) => (
+          {availableCategories.map((cat) => (
             <div key={cat} className="flex items-center gap-2">
               <Checkbox
                 id={`cat-${cat}`}
@@ -116,7 +127,7 @@ export function FilterSidebar({ filters, onChange, onClose }: FilterSidebarProps
           value={filters.priceRange}
           onValueChange={(val) => onChange({ ...filters, priceRange: val as [number, number] })}
           min={0}
-          max={300}
+          max={maxPrice}
           step={10}
           className="mb-2"
         />
@@ -131,7 +142,7 @@ export function FilterSidebar({ filters, onChange, onClose }: FilterSidebarProps
       <div>
         <h3 className="font-semibold text-xs mb-3 text-muted-foreground uppercase tracking-wider">Size</h3>
         <div className="flex flex-wrap gap-2">
-          {allSizes.map((size) => (
+          {availableSizes.map((size) => (
             <button
               key={size}
               onClick={() => toggleSize(size)}
