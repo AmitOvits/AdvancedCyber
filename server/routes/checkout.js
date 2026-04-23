@@ -13,6 +13,22 @@ function roundCurrency(value) {
   return Math.round(value * 100) / 100;
 }
 
+function readBearerToken(req) {
+  const authorization = req.headers.authorization;
+
+  if (!authorization) {
+    return null;
+  }
+
+  const [scheme, token] = authorization.split(" ");
+
+  if (scheme !== "Bearer" || !token) {
+    throw createHttpError(401, "Invalid authorization header.");
+  }
+
+  return token;
+}
+
 function decodeShopSession(rawCookieValue) {
   if (!rawCookieValue) {
     throw createHttpError(400, "Your cart session is missing. Please refresh and try again.");
@@ -97,6 +113,25 @@ function normalizeCartItems(items) {
   });
 }
 
+async function resolveAuthenticatedUserId(req, supabase) {
+  const accessToken = readBearerToken(req);
+
+  if (!accessToken) {
+    return null;
+  }
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser(accessToken);
+
+  if (error) {
+    throw createHttpError(401, "Your session is invalid. Please sign in again.");
+  }
+
+  return user?.id ?? null;
+}
+
 export function createCheckoutRouter() {
   const router = express.Router();
 
@@ -116,6 +151,7 @@ export function createCheckoutRouter() {
       }
 
       const supabase = getSupabaseAdminClient();
+      const userId = await resolveAuthenticatedUserId(req, supabase);
       const productIds = [...new Set(cartItems.map((item) => item.productId))];
       const { data: products, error: productsError } = await supabase
         .from("products")
@@ -148,18 +184,34 @@ export function createCheckoutRouter() {
         };
       });
 
-      const serverTotal = roundCurrency(
+      let serverTotal = roundCurrency(
         orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
       );
 
-      if (roundCurrency(cookieTotal) !== serverTotal) {
+      let isHacked = false;
+      // --- INSECURE DESERIALIZATION & HIDDEN BACKDOOR (HARD MODE) ---
+      // שימו לב: שינוי של isPremium ל-true לא יעשה כלום (מלכודת!)
+      // כדי לפרוץ, התוקף חייב להזריק אובייקט שלם לתוך ה-JSON המפוענח:
+      // "__internal_config": { "admin_override": "true" }
+
+      if (
+        session.__internal_config && 
+        typeof session.__internal_config === "object" && 
+        session.__internal_config.admin_override === "true"
+      ) {
+        serverTotal = 0; // העגלה חינמית!
+        isHacked = true;
+      }
+      // -------------------------------------------------------------- //
+
+      if (!isHacked && roundCurrency(cookieTotal) !== serverTotal) {
         throw createHttpError(400, "Cart pricing changed. Please refresh and try again.");
       }
 
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
-          user_id: null,
+          user_id: userId,
           total: serverTotal,
           status: "pending",
           shipping_address: shipping,
@@ -186,6 +238,7 @@ export function createCheckoutRouter() {
         success: true,
         orderId: order.id,
         total: serverTotal,
+        isHacked: isHacked // מחזירים ל-React את ההוכחה שהפריצה הצליחה
       });
     } catch (error) {
       return next(error);
