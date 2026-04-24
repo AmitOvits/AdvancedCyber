@@ -98,7 +98,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
               </DropdownMenu>
             ) : (
               <Button variant="ghost" size="sm" className="rounded-full text-sm font-medium" asChild>
-                <Link to="/auth">Sign In</Link>
+                <Link to="/auth/sign-in">Sign In</Link>
               </Button>
             )}
           </div>

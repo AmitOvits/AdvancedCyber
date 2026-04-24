@@ -315,7 +315,7 @@ export default function Checkout() {
               </Button>
               {!user && (
                 <p className="text-xs text-muted-foreground text-center">
-                  You're checking out as a guest. <a href="/auth" className="text-primary underline">Sign in</a> to track orders.
+                  You're checking out as a guest. <a href="/auth/sign-in" className="text-primary underline">Sign in</a> to track orders.
                 </p>
               )}
             </div>
