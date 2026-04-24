@@ -6,7 +6,7 @@ export interface AuthContextType {
   session: Session | null;
   loading: boolean;
   isAdmin: boolean;
-  signUp: (email: string, username: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, username: string, password: string) => Promise<{ error: Error | null, role?: string }>;
   signIn: (identifier: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   simulateBypass: (fakeUser: any) => void;
