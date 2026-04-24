@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,13 +8,14 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "./context";
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { signIn, signUp, user, loading: authLoading, simulateBypass } = useAuth();
+  const { pathname } = useLocation();
   const navigate = useNavigate();
+  const isLogin = pathname !== "/auth/sign-up";
 
   useEffect(() => {
     if (user) {
@@ -69,7 +70,7 @@ export default function AuthPage() {
     }
 
     toast.success("Account created and saved to the database. You can sign in now.");
-    setIsLogin(true);
+    navigate("/auth/sign-in");
     setPassword("");
   };
 
@@ -166,8 +167,8 @@ export default function AuthPage() {
               type="button"
               className="text-sm text-primary hover:underline"
               onClick={() => {
-                setIsLogin((current) => !current);
                 resetForm();
+                navigate(isLogin ? "/auth/sign-up" : "/auth/sign-in");
               }}
             >
               {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}

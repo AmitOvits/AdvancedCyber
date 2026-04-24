@@ -57,7 +57,7 @@ export function OrdersPage() {
       </div>
     );
   }
-  if (!user) return <Navigate to="/auth" />;
+  if (!user) return <Navigate to="/auth/sign-in" />;
   if (isAdmin) return <Navigate to="/admin" />;
 
   return (
@@ -200,7 +200,7 @@ export function OrderDetailPage() {
       </div>
     );
   }
-  if (!user) return <Navigate to="/auth" />;
+  if (!user) return <Navigate to="/auth/sign-in" />;
   if (isAdmin) return <Navigate to="/admin" />;
   if (!Number.isInteger(numericOrderNumber) || numericOrderNumber < 1) return <Navigate to="/orders" />;
 

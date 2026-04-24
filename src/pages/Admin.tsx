@@ -26,7 +26,7 @@ export default function Admin() {
   const { isAdmin, loading, user } = useAuth();
 
   if (loading) return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
-  if (!user) return <Navigate to="/auth" />;
+  if (!user) return <Navigate to="/auth/sign-in" />;
   if (!isAdmin) return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-4">
       <p className="text-muted-foreground text-lg">Access denied. Admin privileges required.</p>
