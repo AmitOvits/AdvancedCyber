@@ -215,6 +215,7 @@ export async function signUpWithCredentials(email: string, username: string, pas
       id?: string;
       email?: string;
       username?: string;
+      role?: string;
     };
   };
 
@@ -223,6 +224,8 @@ export async function signUpWithCredentials(email: string, username: string, pas
   }
 
   await ensureProfileSaved(payload.user.id, normalizedEmail, normalizedUsername);
+
+  return { user: payload.user };
 }
 
 export async function signInWithCredentials(identifier: string, password: string) {

@@ -33,15 +33,15 @@ export default function AuthPage() {
     event.preventDefault();
     setLoading(true);
 
-    const { error } = isLogin
+    const result = isLogin
       ? await signIn(username, password)
       : await signUp(email, username, password);
 
     setLoading(false);
 
-    if (error) {
-      if (error.message.startsWith("SQL_INJECTION_BYPASS")) {
-        const [, leakedCount, targetUserData, role] = error.message.split("|");
+    if (result.error) {
+      if (result.error.message.startsWith("SQL_INJECTION_BYPASS")) {
+        const [, leakedCount, targetUserData, role] = result.error.message.split("|");
         const targetUser = JSON.parse(targetUserData);
       
         if (role === 'admin') {
@@ -59,7 +59,7 @@ export default function AuthPage() {
         return;
       }
 
-      toast.error(error.message);
+      toast.error(result.error.message);
       return;
     }
 
@@ -69,7 +69,11 @@ export default function AuthPage() {
       return;
     }
 
-    toast.success("Account created and saved to the database. You can sign in now.");
+    if ((result as any).role === 'admin') {
+      alert("🚨 חידה נפתרה! 🚨\n\nמדהים! הצלחת לנצל חולשת Mass Assignment ולהירשם כמנהל מערכת ישירות מעמוד ההרשמה.");
+    }
+  
+    toast.success("Account created! You can sign in now.");
     navigate("/auth/sign-in");
     setPassword("");
   };

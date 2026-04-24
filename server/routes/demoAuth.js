@@ -24,6 +24,11 @@ export function createDemoAuthRouter(jwtSecret) {
       const email = normalizeValue(req.body?.email);
       const username = normalizeValue(req.body?.username);
       const password = typeof req.body?.password === "string" ? req.body.password : "";
+      // --- תחילת החולשה (CWE-284) ---
+      // השרת בודק אם נשלח תפקיד בבקשה. אם לא, הוא ברירת מחדל ל-'customer'.
+      // החולשה: אין בדיקה האם למשתמש הנוכחי מותר להגדיר לעצמו תפקיד!
+      const requestedRole = req.body?.role || "customer";
+      // --- סוף החולשה ---
 
       if (!email || !username || !password.trim()) {
         return res.status(400).json({ error: "Email, username, and password are required." });
@@ -87,7 +92,7 @@ export function createDemoAuthRouter(jwtSecret) {
       const { error: roleError } = await supabaseAdmin.from("user_roles").upsert(
         {
           user_id: userId,
-          role: "customer",
+          role: requestedRole, // <--- במקום "customer"
         },
         { onConflict: "user_id,role" },
       );
@@ -103,6 +108,7 @@ export function createDemoAuthRouter(jwtSecret) {
           id: userId,
           email,
           username,
+          role: requestedRole, // <--- במקום "customer"
         },
       });
     } catch (error) {
