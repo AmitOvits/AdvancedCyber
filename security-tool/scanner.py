@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import paramiko
 import threading
 import json
+import re
 
 try:
   from zapv2 import ZAPv2
@@ -151,9 +152,13 @@ def announce_sqlmap_placeholder(kali_ip: str) -> None:
   os.system(f'echo "SQL Injection detected. Would now launch sqlmap on the Kali machine {kali_ip}."')
 
 def run_remote_sqlmap(target_url: str, kali_ip: str) -> None:
-    print(f"\n[!] Initiating automated SQLMap attack on: {target_url}")
+    print(f"\n[!] Initiating automated SQLMap attack on raw URL: {target_url}")
     
-    # משיכת פרטי ההתחברות מהקובץ
+    # === ניקוי ה-URL והוספת לייזר (Asterisk) ===
+    # הפעם נחליף את q=1 ב-q=1* # הכוכבית אומרת ל-SQLMap: אל תעשה בדיקות רקע, פשוט תזריק את הקוד הזדוני בדיוק כאן!
+    clean_url = re.sub(r'q=.*', 'q=1*', target_url)
+    print(f"[*] Sanitized and targeted URL for SQLMap: {clean_url}")
+    
     username = os.getenv("KALI_USER", "kali")
     password = os.getenv("KALI_PASSWORD", "kali")
     
@@ -164,15 +169,14 @@ def run_remote_sqlmap(target_url: str, kali_ip: str) -> None:
         print(f"[*] Connecting to Kali ({kali_ip}) via SSH...")
         ssh.connect(hostname=kali_ip, username=username, password=password)
         
-        # בניית פקודת התקיפה: סריקה אוטומטית (batch) ושליפת שמות מסדי הנתונים (dbs)
-        # שמנו את ה-URL בתוך מרכאות כדי למנוע בעיות עם תווים מיוחדים
-        sqlmap_cmd = f"sqlmap -u \"{target_url}\" --batch --dbs --level=3 --risk=3 --tamper=space2comment,between --random-agent --flush-session"
+        # בניית פקודת התקיפה:
+        # 1. הורדנו את --smart
+        # 2. --technique=BEU - מיקוד בשיטות פריצה שמתאימות לאפליקציות מודרניות
+        sqlmap_cmd = f"sqlmap -u \"{clean_url}\" --batch --tables --dbms=sqlite --technique=BEU --level=2 --risk=2 --random-agent --flush-session"
         print(f"[*] Executing payload: {sqlmap_cmd}")
         
-        # הפעלת הפקודה ב-Kali
         stdin, stdout, stderr = ssh.exec_command(sqlmap_cmd)
         
-        # קריאת הפלט (זה ייקח קצת זמן כי SQLMap רץ ברקע)
         output = stdout.read().decode('utf-8')
         
         print("\n=== SQLMAP OUTPUT ===")
@@ -227,17 +231,19 @@ def run_remote_nuclei(target_url: str, kali_ip: str, results_list: list) -> None
     try:
         ssh.connect(hostname=kali_ip, username=username, password=password)
         
-        # הוספנו -silent ו--jsonl כדי לקבל פלט נקי שפייתון יכול לקרוא
-        nuclei_cmd = f"nuclei -u {target_url} -dast -no-update-templates -silent -jsonl"
+        # הפקודה הממוקדת שלנו
+        nuclei_cmd = f"nuclei -u {target_url} -tags cve,vuln,exposure,misconfig,panel -severity critical,high,medium -rl 50 -c 10 -jsonl"
         print(f"[*] Executing payload: {nuclei_cmd}")
         
         stdin, stdout, stderr = ssh.exec_command(nuclei_cmd)
         
-        # קוראים את הפלט שורה אחר שורה
+        error_output = stderr.read().decode('utf-8')
+        if error_output:
+            print(f"\n[-] Nuclei System Logs/Errors:\n{error_output}\n")
+
         for line in stdout:
             try:
                 data = json.loads(line.strip())
-                # ממירים את הפורמט של Nuclei לפורמט שדומה ל-ZAP כדי שהנתב יבין
                 finding = {
                     "alert": data.get("info", {}).get("name", "Nuclei Finding"),
                     "url": data.get("matched-at", target_url),
@@ -246,7 +252,7 @@ def run_remote_nuclei(target_url: str, kali_ip: str, results_list: list) -> None
                 }
                 results_list.append(finding)
             except json.JSONDecodeError:
-                continue # מתעלמים משורות שאינן JSON תקין
+                continue 
                 
         print(f"[+] Nuclei scan completed. Found {len(results_list)} issues.")
             
