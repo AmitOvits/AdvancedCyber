@@ -1,3 +1,4 @@
 zaproxy
 requests
 python-dotenv
+paramiko

