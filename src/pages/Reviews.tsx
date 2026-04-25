@@ -1,10 +1,12 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { MessageSquareQuote, Star } from "lucide-react";
+import { toast } from "sonner";
 import { CartDrawer } from "@/components/CartDrawer";
 import { Header } from "@/components/Header";
-import { fetchStoreReviews } from "@/features/reviews/api";
+import { AddReviewForm } from "@/features/reviews/AddReviewForm";
+import { createStoreReview, fetchStoreReviews, type CreateReviewInput } from "@/features/reviews/api";
 
 const reviewDateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -26,11 +28,32 @@ function Stars({ rating }: { rating: number }) {
 }
 
 export default function Reviews() {
+  const queryClient = useQueryClient();
   const { data: reviews = [], isLoading, error } = useQuery({
     queryKey: ["store-reviews"],
     queryFn: fetchStoreReviews,
   });
-
+  const submitReviewMutation = useMutation({
+    mutationFn: (values: CreateReviewInput) => createStoreReview(values),
+    onSuccess: async () => {
+      toast.success("Review submitted successfully.");
+      await queryClient.invalidateQueries({ queryKey: ["store-reviews"] });
+    },
+    onError: (submitError) => {
+      const message = submitError instanceof Error ? submitError.message : "Failed to submit review.";
+      
+      // בדיקה אם ההודעה מהשרת מכילה את טקסט הניצחון שלנו
+      if (message.includes("successfully found")) {
+        // מקפיץ Alert מובנה של הדפדפן
+        window.alert("🏆 Great job! You successfully found the DoS vulnerability!");
+        // מקפיץ גם Toast ירוק
+        toast.success(message, { duration: 6000 });
+      } else {
+        // שגיאה רגילה תקבל Toast אדום
+        toast.error(message);
+      }
+    },
+  });
   const stats = useMemo(() => {
     if (reviews.length === 0) {
       return {
@@ -79,6 +102,13 @@ export default function Reviews() {
             </div>
           </div>
         </motion.div>
+
+        <AddReviewForm
+          isSubmitting={submitReviewMutation.isPending}
+          onSubmit={async (values) => {
+            await submitReviewMutation.mutateAsync(values);
+          }}
+        />
 
         {error ? (
           <div className="glass rounded-2xl p-10 text-center text-muted-foreground">
