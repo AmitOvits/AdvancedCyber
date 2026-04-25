@@ -10,6 +10,7 @@ import { createAiExpertRouter } from "./routes/aiExpert.js";
 import { createCheckoutRouter } from "./routes/checkout.js";
 import { createDemoAuthRouter } from "./routes/demoAuth.js";
 import { createDemoCatalogRouter } from "./routes/demoCatalog.js";
+import { createReviewsRouter } from "./routes/reviews.js";
 
 assertTrainingModeSafeToRun();
 
@@ -18,7 +19,7 @@ app.disable("x-powered-by");
 
 app.use(cors({ origin: true, credentials: true }));
 app.use(cookieParser());
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "1mb" })); //vulnareable to dos attack
 
 const trainingMode = isTrainingModeEnabled();
 const port = Number.parseInt(process.env.PORT ?? "3001", 10);
@@ -27,6 +28,7 @@ const requireJwt = createRequireJwt(jwtSecret);
 
 app.use("/api", createAiExpertRouter());
 app.use("/api", createCheckoutRouter());
+app.use("/api", createReviewsRouter());
 app.use("/api/v2", createDemoAuthRouter(jwtSecret));
 app.use("/api/v2", createDemoCatalogRouter({ requireJwt }));
 
