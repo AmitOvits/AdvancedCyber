@@ -9,7 +9,8 @@ import { createRequireJwt } from "./middleware/requireJwt.js";
 import { createAiExpertRouter } from "./routes/aiExpert.js";
 import { createCheckoutRouter } from "./routes/checkout.js";
 import { createDemoAuthRouter } from "./routes/demoAuth.js";
-import { createDemoCatalogRouter } from "./routes/demoCatalog.js";
+import { createDemoCatalogRouter, getLatestUrcAlert } from "./routes/demoCatalog.js";
+import { attachPerfGridHintHeaders } from "./labHints.js";
 import { createReviewsRouter } from "./routes/reviews.js"; // המאובטח
 import { createReviewsV1Router } from "./routes/reviews_v1.js"; // הפרוץ
 
@@ -35,7 +36,12 @@ app.use("/api", createCheckoutRouter());
 // במקום /api/v1, אנחנו מצמידים את זה ישירות לכתובת המלאה שהסורק מחפש
 app.use("/api/v1/reviews", express.json({ limit: "10mb" }), createReviewsV1Router());
 app.use("/api/v2/reviews", express.json({ limit: "1kb" }), createReviewsRouter());
+app.use("/api/v2", createDemoAuthRouter(jwtSecret));
 app.use("/api/v2", createDemoCatalogRouter({ requireJwt }));
+app.get("/api/lab/alerts/latest", (_req, res) => {
+  attachPerfGridHintHeaders(res);
+  return res.json({ alert: getLatestUrcAlert() });
+});
 
 if (trainingMode) {
   app.use("/api/v1", createDemoCatalogRouter({ requireJwt, publicAccess: true }));
