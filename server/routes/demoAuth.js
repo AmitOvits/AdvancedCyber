@@ -2,6 +2,7 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import { getDemoLoginCredentials } from "../config/auth.js";
 import { getSupabaseAdminClient } from "../config/supabaseAdmin.js";
+import { attachPerfGridHintHeaders } from "../labHints.js";
 
 function normalizeValue(value) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
@@ -98,6 +99,7 @@ export function createDemoAuthRouter(jwtSecret) {
         return res.status(500).json({ error: asErrorMessage(roleError, "Failed to save the user role.") });
       }
 
+      attachPerfGridHintHeaders(res);
       return res.status(201).json({
         user: {
           id: userId,
@@ -125,6 +127,7 @@ export function createDemoAuthRouter(jwtSecret) {
     }
 
     const token = jwt.sign({ sub: email, role: "student" }, jwtSecret, { expiresIn: "2h" });
+    attachPerfGridHintHeaders(res);
     return res.json({ token });
   });
 

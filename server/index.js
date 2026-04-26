@@ -7,7 +7,8 @@ import { createApiErrorHandler, apiNotFound } from "./middleware/errorHandler.js
 import { createRequireJwt } from "./middleware/requireJwt.js";
 import { createAiExpertRouter } from "./routes/aiExpert.js";
 import { createDemoAuthRouter } from "./routes/demoAuth.js";
-import { createDemoCatalogRouter } from "./routes/demoCatalog.js";
+import { createDemoCatalogRouter, getLatestUrcAlert } from "./routes/demoCatalog.js";
+import { attachPerfGridHintHeaders } from "./labHints.js";
 
 assertTrainingModeSafeToRun();
 
@@ -25,6 +26,10 @@ const requireJwt = createRequireJwt(jwtSecret);
 app.use("/api", createAiExpertRouter());
 app.use("/api/v2", createDemoAuthRouter(jwtSecret));
 app.use("/api/v2", createDemoCatalogRouter({ requireJwt }));
+app.get("/api/lab/alerts/latest", (_req, res) => {
+  attachPerfGridHintHeaders(res);
+  return res.json({ alert: getLatestUrcAlert() });
+});
 
 if (trainingMode) {
   app.use("/api/v1", createDemoCatalogRouter({ requireJwt, publicAccess: true }));
