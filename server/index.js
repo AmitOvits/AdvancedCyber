@@ -36,6 +36,7 @@ app.use("/api", createCheckoutRouter());
 // במקום /api/v1, אנחנו מצמידים את זה ישירות לכתובת המלאה שהסורק מחפש
 app.use("/api/v1/reviews", express.json({ limit: "10mb" }), createReviewsV1Router());
 app.use("/api/v2/reviews", express.json({ limit: "1kb" }), createReviewsRouter());
+app.use("/api/v2", createDemoAuthRouter(jwtSecret));
 app.use("/api/v2", createDemoCatalogRouter({ requireJwt }));
 app.get("/api/lab/alerts/latest", (_req, res) => {
   attachPerfGridHintHeaders(res);
