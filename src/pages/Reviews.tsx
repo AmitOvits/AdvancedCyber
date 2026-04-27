@@ -30,6 +30,7 @@ export default function Reviews() {
   const logContainerRef = useRef<HTMLDivElement>(null);
   
   // --- מצבי סריקה (Real Probing States) ---
+  const [isScannerHidden] = useState(true);
   const [isScanning, setIsScanning] = useState(false);
   const [discoveredEndpoint, setDiscoveredEndpoint] = useState<string | null>(null);
   const [useLegacyApi, setUseLegacyApi] = useState(false);
@@ -152,7 +153,7 @@ export default function Reviews() {
         </motion.div>
 
         {/* --- כלי סריקת רשת אמיתי (Recon Tool) --- */}
-        <div className="mb-10 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl">
+        <div hidden={isScannerHidden} className="mb-10 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl">
           <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/80 px-4 py-2">
             <div className="flex items-center gap-2">
               <Terminal className="h-4 w-4 text-emerald-500" />
