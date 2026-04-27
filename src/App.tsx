@@ -17,6 +17,7 @@ import Checkout from "./pages/Checkout.tsx";
 import { OrderDetailPage, OrdersPage } from "./pages/Orders.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { AiShoeExpertWidget } from "@/components/AiShoeExpertWidget";
+import { GlobalUrcAlertWatcher } from "@/components/GlobalUrcAlertWatcher";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AiShoeExpertWidget />
+      <GlobalUrcAlertWatcher />
       <BrowserRouter>
         <AuthProvider>
           <CartProvider>
