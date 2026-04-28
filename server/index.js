@@ -9,7 +9,11 @@ import { createRequireJwt } from "./middleware/requireJwt.js";
 import { createAiExpertRouter } from "./routes/aiExpert.js";
 import { createCheckoutRouter } from "./routes/checkout.js";
 import { createDemoAuthRouter } from "./routes/demoAuth.js";
-import { createDemoCatalogRouter, getLatestUrcAlert } from "./routes/demoCatalog.js";
+import {
+  createDemoCatalogRouter,
+  getLatestPathTraversalAlert,
+  getLatestUrcAlert,
+} from "./routes/demoCatalog.js";
 import { attachPerfGridHintHeaders } from "./labHints.js";
 import { createReviewsRouter } from "./routes/reviews.js"; // המאובטח
 import { createReviewsV1Router } from "./routes/reviews_v1.js"; // הפרוץ
@@ -19,7 +23,13 @@ assertTrainingModeSafeToRun();
 const app = express();
 app.disable("x-powered-by");
 
-app.use(cors({ origin: true, credentials: true }));
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+    exposedHeaders: ["x-training-vulnerability"],
+  }),
+);
 app.use(cookieParser());
 app.use(express.json({ limit: "1mb" })); //vulnareable to dos attack
 
@@ -40,7 +50,10 @@ app.use("/api/v2", createDemoAuthRouter(jwtSecret));
 app.use("/api/v2", createDemoCatalogRouter({ requireJwt }));
 app.get("/api/lab/alerts/latest", (_req, res) => {
   attachPerfGridHintHeaders(res);
-  return res.json({ alert: getLatestUrcAlert() });
+  return res.json({
+    alert: getLatestUrcAlert(),
+    pathTraversalAlert: getLatestPathTraversalAlert(),
+  });
 });
 
 if (trainingMode) {

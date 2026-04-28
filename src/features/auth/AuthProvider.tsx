@@ -10,6 +10,10 @@ import {
 } from "./api";
 import { AuthContext } from "./context";
 
+/** SQLi lab: no real JWT — Supabase keeps firing session=null; without this we wipe the synthetic user (BOLA then “kicks you out”). */
+const STORAGE_SQLI_BYPASS = "advancedcyber-sqli-bypass-active";
+const STORAGE_SQLI_BYPASS_USER = "advancedcyber-sqli-bypass-user-json";
+
 function asError(error: unknown) {
   return error instanceof Error ? error : new Error("Unexpected authentication error.");
 }
@@ -56,30 +60,78 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const nextUser = nextSession?.user ?? null;
-      setSession(nextSession);
-      setUser(nextUser);
+      if (nextSession?.user) {
+        try {
+          sessionStorage.removeItem(STORAGE_SQLI_BYPASS);
+          sessionStorage.removeItem(STORAGE_SQLI_BYPASS_USER);
+        } catch {
+          /* ignore */
+        }
 
-      if (!nextUser) {
-        setIsAdmin(false);
-        setLoading(false);
+        const nextUser = nextSession.user;
+        setSession(nextSession);
+        setUser(nextUser);
+
+        try {
+          const admin = await withTimeout(checkAdminRole(nextUser.id), 4000, false);
+          if (isMounted) {
+            setIsAdmin(admin);
+          }
+        } catch {
+          if (isMounted) {
+            setIsAdmin(false);
+          }
+        } finally {
+          if (isMounted) {
+            setLoading(false);
+          }
+        }
         return;
       }
 
       try {
-        const admin = await withTimeout(checkAdminRole(nextUser.id), 4000, false);
+        if (sessionStorage.getItem(STORAGE_SQLI_BYPASS) === "1") {
+          const raw = sessionStorage.getItem(STORAGE_SQLI_BYPASS_USER);
+          if (raw) {
+            const parsed = JSON.parse(raw) as { id: string; email: string; username: string };
+            const bypassedUser = {
+              id: parsed.id,
+              email: parsed.email,
+              user_metadata: { username: parsed.username },
+              app_metadata: {},
+              aud: "authenticated",
+              created_at: new Date().toISOString(),
+            } as User;
 
-        if (isMounted) {
-          setIsAdmin(admin);
+            setSession(null);
+            setUser(bypassedUser);
+
+            try {
+              const admin = await withTimeout(checkAdminRole(parsed.id), 4000, false);
+              if (isMounted) {
+                setIsAdmin(admin);
+              }
+            } catch {
+              if (isMounted) {
+                setIsAdmin(false);
+              }
+            } finally {
+              if (isMounted) {
+                setLoading(false);
+              }
+            }
+            return;
+          }
         }
       } catch {
-        if (isMounted) {
-          setIsAdmin(false);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        /* corrupt storage */
+      }
+
+      setSession(null);
+      setUser(null);
+      setIsAdmin(false);
+      if (isMounted) {
+        setLoading(false);
       }
     };
 
@@ -116,10 +168,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    try {
+      sessionStorage.removeItem(STORAGE_SQLI_BYPASS);
+      sessionStorage.removeItem(STORAGE_SQLI_BYPASS_USER);
+    } catch {
+      /* ignore */
+    }
     await signOutCurrentUser();
   };
 
   const simulateBypass = async (fakeUser: any) => {
+    try {
+      sessionStorage.setItem(STORAGE_SQLI_BYPASS, "1");
+      sessionStorage.setItem(
+        STORAGE_SQLI_BYPASS_USER,
+        JSON.stringify({
+          id: fakeUser.id,
+          email: fakeUser.email,
+          username: fakeUser.username,
+        }),
+      );
+    } catch {
+      /* ignore */
+    }
+
     const bypassedUser = {
       id: fakeUser.id,
       email: fakeUser.email,
@@ -129,6 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       created_at: new Date().toISOString()
     } as User;
 
+    setSession(null);
     setUser(bypassedUser);
     
     // התוספת: אנחנו בודקים ב-DB האם למשתמש שפרצנו אליו יש תפקיד 'admin'
@@ -138,6 +211,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error("Failed to fetch roles for bypassed user", err);
       setIsAdmin(false);
+    } finally {
+      setLoading(false);
     }
   };
 
