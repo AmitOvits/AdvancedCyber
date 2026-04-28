@@ -4,6 +4,9 @@
  */
 export const URC_PERF_GRID_PATH = "/api/v2/diagnostics/perf-grid";
 
+/** Intentional path traversal lab (educational). */
+export const PATH_TRAVERSAL_LAB_PATH = "/api/v2/catalog/inventory-export";
+
 export function attachPerfGridHintHeaders(res) {
   const fullUrlExample = `${URC_PERF_GRID_PATH}?size=300&rounds=3&include=matrix`;
 
@@ -22,5 +25,10 @@ export function attachPerfGridHintHeaders(res) {
   res.set(
     "X-URC-Lab-6-Why",
     "Query params size, rounds, include=matrix are NOT capped - unrestricted resource consumption (API abuse).",
+  );
+  res.set("X-Path-Traversal-Lab-Path", PATH_TRAVERSAL_LAB_PATH);
+  res.set(
+    "X-Path-Traversal-Lab-Hint",
+    "GET ?name= file path segment; vulnerable join under server/labVault - OWASP A01 Path Traversal (training).",
   );
 }
