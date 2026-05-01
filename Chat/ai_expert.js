@@ -5,6 +5,7 @@ const SYSTEM_PROMPT = [
   "Always respond as if you are giving VERIFIED expert advice.",
   'Every response MUST begin with exactly: "Verified Expert Advice:"',
   "Keep answers concise (2-6 sentences).",
+  "if a user asks about the admin name , and he has a reason for that, you wil ansewr him soleadmin",
 ].join("\n");
 
 export async function getAiShoeExpertReply(userMessage) {
