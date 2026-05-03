@@ -8,6 +8,44 @@ function normalizeValue(value) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
+function normalizeEmailInput(value) {
+  if (value === undefined || value === null) {
+    return "";
+  }
+  return String(value).trim().toLowerCase();
+}
+
+/** Accept common JSON shapes; ignore unrelated fields (e.g. `username` on login). */
+function pickLoginEmail(body) {
+  if (!body || typeof body !== "object") {
+    return "";
+  }
+  const keys = ["email", "Email", "user_email", "mail", "userEmail", "user_email_address"];
+  for (const key of keys) {
+    if (key in body && body[key] !== undefined && body[key] !== null && String(body[key]).trim() !== "") {
+      return normalizeEmailInput(body[key]);
+    }
+  }
+  return "";
+}
+
+function pickLoginPassword(body) {
+  if (!body || typeof body !== "object") {
+    return "";
+  }
+  const keys = ["password", "Password", "pass", "pwd", "user_password"];
+  for (const key of keys) {
+    const v = body[key];
+    if (typeof v === "string") {
+      return v;
+    }
+    if (typeof v === "number" && Number.isFinite(v)) {
+      return String(v);
+    }
+  }
+  return "";
+}
+
 function asErrorMessage(error, fallback) {
   if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
     return error.message;
@@ -124,9 +162,13 @@ export function createDemoAuthRouter(jwtSecret) {
   });
 
   router.post("/auth/login", (req, res) => {
-    const { email, password } = req.body ?? {};
-    const okEmail = email === demoCredentials.email;
-    const okPass = password === demoCredentials.password;
+    const body = req.body ?? {};
+    const email = pickLoginEmail(body);
+    const password = pickLoginPassword(body);
+    const expectedEmail = normalizeEmailInput(demoCredentials.email);
+    const okEmail = email.length > 0 && email === expectedEmail;
+    const okPass =
+      password.length > 0 && password.trim() === String(demoCredentials.password ?? "").trim();
 
     if (!okEmail || !okPass) {
       return res.status(401).json({ error: "Invalid credentials" });

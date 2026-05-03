@@ -11,6 +11,7 @@ import { createCheckoutRouter } from "./routes/checkout.js";
 import { createDemoAuthRouter } from "./routes/demoAuth.js";
 import {
   createDemoCatalogRouter,
+  createFtpLabRouter,
   getLatestPathTraversalAlert,
   getLatestUrcAlert,
 } from "./routes/demoCatalog.js";
@@ -38,6 +39,7 @@ const port = Number.parseInt(process.env.PORT ?? "3001", 10);
 const jwtSecret = getJwtSecret();
 const requireJwt = createRequireJwt(jwtSecret);
 
+app.use("/ftp", createFtpLabRouter());
 app.use("/api", createAiExpertRouter());
 app.use("/api", createCheckoutRouter());
 // 1. הגרסה המודרנית (v2) - הגנה רשתית קשיחה
