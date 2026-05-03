@@ -1,2 +1,2 @@
 Expected safe export from the lab vault root.
-Use name= with parent-directory segments to practice path traversal (training only).
+Open the listing at /ftp (no token), click a file, then edit the name= query with ../ segments to practice path traversal (training only).
