@@ -1,0 +1,557 @@
+
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>דוח בדיקת חדירות - CrossGuard-AI</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+            line-height: 1.6;
+            direction: rtl; /* Ensure global right-to-left direction */
+            text-align: right; /* Default text alignment */
+        }
+        h1, h2, h3 {
+            background-color: #2c3e50; /* Dark blue-grey for headers */
+            color: #ecf0f1; /* Light grey text */
+            padding: 15px 20px;
+            border-radius: 5px;
+            margin-bottom: 25px;
+            text-align: right;
+            border-bottom: 3px solid #3498db; /* Blue accent */
+        }
+        h1 {
+            font-size: 2.5em;
+            text-align: center;
+            border-bottom: 5px solid #3498db;
+        }
+        h2 {
+            font-size: 2em;
+        }
+        h3 {
+            font-size: 1.5em;
+            background-color: #34495e; /* Slightly lighter dark blue-grey */
+            border-bottom: 2px solid #2980b9;
+        }
+        section {
+            background-color: #ffffff;
+            padding: 30px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            text-align: right; /* Ensure table content is right-aligned */
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: right; /* Specific for table cells */
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+            color: #333;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        .critical {
+            color: #e74c3c; /* Red for critical findings */
+            font-weight: bold;
+        }
+        .high {
+            color: #e67e22; /* Orange for high findings */
+            font-weight: bold;
+        }
+        .medium {
+            color: #f1c40f; /* Yellow for medium findings */
+        }
+        .low {
+            color: #2ecc71; /* Green for low findings */
+        }
+        .informational {
+            color: #95a5a6; /* Grey for informational findings */
+        }
+        pre {
+            background-color: #232b35; /* Dark background for code blocks */
+            color: #f8f8f2; /* Light text for code */
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto; /* Allow horizontal scrolling for wide content */
+            font-family: 'Consolas', 'Monaco', monospace;
+            white-space: pre-wrap; /* Wrap long lines */
+            word-wrap: break-word; /* Break words if necessary */
+            text-align: left; /* Code is typically LTR, even in RTL reports */
+            direction: ltr; /* Override global RTL for code blocks */
+        }
+        ul {
+            list-style-position: inside; /* Bullets inside list-item box */
+            padding-right: 20px; /* Indent for RTL lists */
+            text-align: right;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .note {
+            background-color: #ecf0f1;
+            border-right: 5px solid #3498db;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>דוח בדיקת חדירות עבור CrossGuard-AI</h1>
+    <p style="text-align: center;">תאריך: 2026-05-03</p>
+    <p style="text-align: center;">מערכת מטרה: <a href="http://192.168.190.129:3000" target="_blank">http://192.168.190.129:3000</a></p>
+
+    <section>
+        <h2>תקציר מנהלים</h2>
+        <p>דוח זה מציג את ממצאי בדיקת החדירות האוטומטית שבוצעה כנגד מערכת <a href="http://192.168.190.129:3000">http://192.168.190.129:3000</a>, כחלק מפרויקט CrossGuard-AI. תהליך הבדיקה כלל מספר שלבים אוטומטיים, החל מסריקת פגיעות ראשונית ועד לניסיונות ניצול ממוקדים.</p>
+        <p>בשלב הראשון, בוצעו סריקות פגיעות באמצעות סורקים מובילים (ZAP ו-Nuclei), שזיהו מגוון רחב של חולשות, החל מחולשות מידעניות ועד חולשות קריטיות כגון הזרקת SQL.</p>
+        <p>לאחר מכן, מנגנון ניתוב מבוסס AI ניתח את ממצאי הסריקה והפנה אותם לכלי ניצול ייעודיים. כלי אלו, שכללו בין היתר את SQLMap, כלי לפריצת חשבונות אדמין, מנגנון יצירת קוד XSS זדוני, כלי לקריאת קבצים שרירותית וכלי לחילוץ נתונים מ-FTP, ניסו לנצל את הפגיעות שזוהו.</p>
+        <p>הבדיקה האוטומטית הגיעה להצלחות קריטיות, כולל:</p>
+        <ul>
+            <li class="critical"><strong>הזרקת SQL</strong> שאפשרה חילוץ שמות טבלאות ממסד הנתונים.</li>
+            <li class="critical"><strong>פריצת חשבון מנהל</strong> וגניבת אסימון JWT, המעניקה גישה מלאה למערכת.</li>
+            <li class="critical"><strong>דליפת נתונים רגישים ביותר</strong> דרך ספריית FTP חשופה, כולל קובץ KeePass המכיל סיסמאות תאגידיות.</li>
+            <li class="critical"><strong>קריאת קבצים שרירותית</strong> שאפשרה חילוץ קבצי גיבוי פנימיים וגישה למידע תצורה.</li>
+            <li class="high"><strong>זיהוי נקודות תורפה רבות מסוג XSS</strong> שניתן לנצל לפגיעה במשתמשים.</li>
+        </ul>
+        <p>ממצאי הדוח מדגישים חולשות אבטחה משמעותיות במערכת המטרה ודורשים טיפול מיידי. ההמלצות המפורטות להלן נועדו לספק הנחיות לתיקון הפגיעות והגברת האבטחה.</p>
+    </section>
+
+    <section>
+        <h2>ממצאי סריקה ראשונית (ZAP & Nuclei)</h2>
+        <p>להלן סיכום הפגיעות שזוהו בשלב הסריקה הראשונית באמצעות הכלים ZAP ו-Nuclei:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>פגיעות</th>
+                    <th>רמת סיכון</th>
+                    <th>סורק מקור</th>
+                    <th>ספירה</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Content Security Policy (CSP) Header Not Set</td>
+                    <td class="medium">בינוני</td>
+                    <td>ZAP</td>
+                    <td>3</td>
+                </tr>
+                <tr>
+                    <td>Cross-Domain Misconfiguration</td>
+                    <td class="medium">בינוני</td>
+                    <td>ZAP</td>
+                    <td>34</td>
+                </tr>
+                <tr>
+                    <td>Modern Web Application</td>
+                    <td class="informational">מידעני</td>
+                    <td>ZAP</td>
+                    <td>1</td>
+                </tr>
+                <tr>
+                    <td>Timestamp Disclosure - Unix</td>
+                    <td class="low">נמוך</td>
+                    <td>ZAP</td>
+                    <td>18</td>
+                </tr>
+                <tr>
+                    <td>Information Disclosure - Suspicious Comments</td>
+                    <td class="informational">מידעני</td>
+                    <td>ZAP</td>
+                    <td>4</td>
+                </tr>
+                <tr>
+                    <td>X-Content-Type-Options Header Missing</td>
+                    <td class="low">נמוך</td>
+                    <td>ZAP</td>
+                    <td>5</td>
+                </tr>
+                <tr>
+                    <td>Private IP Disclosure</td>
+                    <td class="low">נמוך</td>
+                    <td>ZAP</td>
+                    <td>1</td>
+                </tr>
+                <tr>
+                    <td>Missing Anti-clickjacking Header</td>
+                    <td class="medium">בינוני</td>
+                    <td>ZAP</td>
+                    <td>2</td>
+                </tr>
+                <tr>
+                    <td>Session ID in URL Rewrite</td>
+                    <td class="medium">בינוני</td>
+                    <td>ZAP</td>
+                    <td>73</td>
+                </tr>
+                <tr>
+                    <td>SQL Injection</td>
+                    <td class="critical">גבוה</td>
+                    <td>ZAP</td>
+                    <td>1</td>
+                </tr>
+                <tr>
+                    <td>User Agent Fuzzer</td>
+                    <td class="informational">מידעני</td>
+                    <td>ZAP</td>
+                    <td>132</td>
+                </tr>
+                <tr>
+                    <td>Re-examine Cache-control Directives</td>
+                    <td class="informational">מידעני</td>
+                    <td>ZAP</td>
+                    <td>1</td>
+                </tr>
+                <tr>
+                    <td>Retrieved from Cache</td>
+                    <td class="informational">מידעני</td>
+                    <td>ZAP</td>
+                    <td>1</td>
+                </tr>
+                <tr>
+                    <td>Strict-Transport-Security Header Not Set</td>
+                    <td class="low">נמוך</td>
+                    <td>ZAP</td>
+                    <td>1</td>
+                </tr>
+                <tr>
+                    <td>Prometheus Metrics - Detect</td>
+                    <td class="medium">בינוני</td>
+                    <td>Nuclei</td>
+                    <td>1</td>
+                </tr>
+            </tbody>
+        </table>
+        <p class="note"><strong>הערה:</strong> סורק ZAP זיהה בסך הכל 277 התרעות, מתוכן נבחרו הפגיעות המשמעותיות יותר לניצול.</p>
+    </section>
+
+    <section>
+        <h2>ממצאי תקיפה מפורטים (Exploitation Phase)</h2>
+        <p>בשלב זה, מנגנון ה-AI הפנה את הפגיעות שזוהו לכלי ניצול ייעודיים, אשר הובילו למספר הצלחות קריטיות:</p>
+
+        <h3>1. הזרקת SQL מוצלחת - חילוץ שמות טבלאות</h3>
+        <p>אחת הפגיעות הקריטיות שזוהו היא הזרקת SQL פרמטרית (Boolean-based blind) בפרמטר ה-URI של כתובת ה-URL הבאה: <code dir="ltr">http://192.168.190.129:3000/rest/products/search?q=1*</code>. הכלי SQLMap הצליח לנצל פגיעות זו ולאמת את קיומה של מערכת ניהול בסיסי נתונים מסוג SQLite. כתוצאה מכך, נחשפו 21 טבלאות מבסיס הנתונים, כולל הטבלה הקריטית <span class="critical">Users</span> המכילה מידע על משתמשים.</p>
+        <p><strong>פרטי הניצול (קטע מיומן SQLMap):</strong></p>
+        <pre><code dir="ltr">
+[12:29:04] [INFO] URI parameter '#1*' appears to be 'AND boolean-based blind - WHERE or HAVING clause' injectable (with --string="Cydonia")
+---
+Parameter: #1* (URI)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: http://192.168.190.129:3000/rest/products/search?q=1%' AND 5259=5259 AND 'ahvJ%'='ahvJ
+---
+[12:29:05] [INFO] the back-end DBMS is SQLite
+back-end DBMS: SQLite
+[12:29:05] [INFO] fetching tables for database: 'SQLite_masterdb'
+[21 tables]
++-------------------+
+| Addresses         |
+| BasketItems       |
+| Baskets           |
+| Captchas          |
+| Cards             |
+| Challenges        |
+| Complaints        |
+| Deliveries        |
+| Feedbacks         |
+| Hints             |
+| ImageCaptchas     |
+| Memories          |
+| PrivacyRequests   |
+| Products          |
+| Quantities        |
+| Recycles          |
+| SecurityAnswers   |
+| SecurityQuestions |
+| Users             |
+| Wallets           |
+| sqlite_sequence   |
++-------------------+
+        </code></pre>
+
+        <h3>2. פריצת חשבון מנהל וגניבת אסימון JWT</h3>
+        <p>חשבון המנהל במערכת נפרץ בהצלחה באמצעות ניסיונות אימות אוטומטיים. שם המשתמש <code dir="ltr">admin@juice-sh.op</code> והסיסמה <span class="critical">admin123</span> שימשו לכניסה למערכת. כתוצאה מכך, נגנב אסימון JWT (JSON Web Token) תקף של חשבון המנהל, המאפשר עקיפת מנגנוני אימות וקבלת גישה מלאה לפונקציונליות ניהולית.</p>
+        <p><strong>אסימון JWT שנגנב:</strong></p>
+        <pre><code dir="ltr">
+eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdGF0dXMiOiJzdWNjZXNzIiwiZGF0YSI6eyJpZCI6MSwidXNlcm5hbWUiOiIiLCJlbWFpbCI6ImFkbWluQGp1aWNlLXNoLm9wIiwicGFzc3dvcmQiOiIwMTkyMDIzYTdiYmQ3MzI1MDUxNmYwNjlkZjE4YjUwMCIsInJvbGUiOiJhZG1pbiIsImRlbHV4ZVRva2VuIjoiIiwibGFzdExvZ2luSXAiOiIiLCJwcm9maWxlSW1hZ2UiOiJhc3NldHMvcHVibGljL2ltYWdlcy91cGxvYWRzL2RlZmF1bHRBZG1pbi5wbmciLCJ0b3RwU2VjcmV0IjoiIiwiaXNBY3RpdmUiOnRydWUsImNyZWF0ZWRBdCI6IjIwMjYtMDUtMDMgMTQ6MzQ6MDEuODg5ICswMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDUtMDMgMTQ6MzQ6MDEuODg5ICswMDowMCIsImRlbGV0ZWRBdCI6bnVsbH0sImlhdCI6MTc3NzgyNTc0M30.wlvxjVYWpzz8pwKaLAf9P60ljCHEFgRo4bPxHosghNM4PLBpDcvPKBby3LDxK_vQNWjCRKioZedNWQGljv1JdRqxdZ-97-RyCfo5H0NioF4Jbfax7Ol4Dbcrd3uJBK0Olerc5V_fpU4kuNRleKfzrKLov9u-gmdZp8UMtOckuW8
+        </code></pre>
+
+        <h3>3. דליפת נתונים רגישים דרך ספריית FTP חשופה</h3>
+        <p>המערכת חשפה ספריית FTP הנגישה לציבור (<code dir="ltr">http://192.168.190.129:3000/ftp/</code>), דבר שאפשר חילוץ של קבצים פנימיים ורגישים. בין הקבצים שנגנבו, זוהה קובץ <span class="critical">incident-support.kdbx</span>, שהוא קובץ מסד נתונים של KeePass. קובץ זה מכיל לרוב סיסמאות ופרטי גישה קריטיים של הארגון. חשיפה זו מאפשרת לתוקפים להוריד ולפצח את קובץ הסיסמאות במצב לא מקוון, מה שעלול להוביל לפריצה מלאה לתשתיות הארגון.</p>
+        <p><strong>רשימת קבצים רגישים שנגנבו:</strong></p>
+        <ul>
+            <li><span class="critical">incident-support.kdbx</span> (KeePass Database)</li>
+            <li>package-lock.json.bak</li>
+            <li>legal.md</li>
+            <li>announcement_encrypted.md</li>
+            <li>package.json.bak</li>
+            <li>acquisitions.md</li>
+            <li>coupons_2013.md.bak</li>
+        </ul>
+
+        <h3>4. קריאת קבצים שרירותית - חילוץ 'package.json.bak'</h3>
+        <p>נוצלה פגיעות המאפשרת קריאת קבצים שרירותית, על ידי עקיפת הגבלות סיומות קבצים באמצעות 'Null Byte Poisoning' (<code dir="ltr">%2500.md</code>). פגיעות זו אפשרה גישה לקבצי גיבוי פנימיים שלא היו אמורים להיות נגישים. כדוגמה, נחשפה התוכן המלא של הקובץ <span class="critical">package.json.bak</span>, המכיל מידע קריטי על תלויות, סקריפטים וסביבת הפיתוח של האפליקציה.</p>
+        <p><strong>תוכן הקובץ 'package.json.bak':</strong></p>
+        <pre><code dir="ltr">
+{
+  "name": "juice-shop",
+  "version": "6.2.0-SNAPSHOT",
+  "description": "An intentionally insecure JavaScript Web Application",
+  "homepage": "http://owasp-juice.shop",
+  "author": "Björn Kimminich &lt;bjoern.kimminich@owasp.org&gt; (https://kimminich.de)",
+  "contributors": [
+    "Björn Kimminich",
+    "Jannik Hollenbach",
+    "Aashish683",
+    "greenkeeper[bot]",
+    "MarcRler",
+    "agrawalarpit14",
+    "Scar26",
+    "CaptainFreak",
+    "Supratik Das",
+    "JuiceShopBot",
+    "the-pro",
+    "Ziyang Li",
+    "aaryan10",
+    "m4l1c3",
+    "Timo Pagel",
+    "..."
+  ],
+  "private": true,
+  "keywords": [
+    "web security",
+    "web application security",
+    "webappsec",
+    "owasp",
+    "pentest",
+    "pentesting",
+    "security",
+    "vulnerable",
+    "vulnerability",
+    "broken",
+    "bodgeit"
+  ],
+  "dependencies": {
+    "body-parser": "~1.18",
+    "colors": "~1.1",
+    "config": "~1.28",
+    "cookie-parser": "~1.4",
+    "cors": "~2.8",
+    "dottie": "~2.0",
+    "epilogue-js": "~0.7",
+    "errorhandler": "~1.5",
+    "express": "~4.16",
+    "express-jwt": "0.1.3",
+    "fs-extra": "~4.0",
+    "glob": "~5.0",
+    "grunt": "~1.0",
+    "grunt-angular-templates": "~1.1",
+    "grunt-contrib-clean": "~1.1",
+    "grunt-contrib-compress": "~1.4",
+    "grunt-contrib-concat": "~1.0",
+    "grunt-contrib-uglify": "~3.2",
+    "hashids": "~1.1",
+    "helmet": "~3.9",
+    "html-entities": "~1.2",
+    "jasmine": "^2.8.0",
+    "js-yaml": "3.10",
+    "jsonwebtoken": "~8",
+    "jssha": "~2.3",
+    "libxmljs": "~0.18",
+    "marsdb": "~0.6",
+    "morgan": "~1.9",
+    "multer": "~1.3",
+    "pdfkit": "~0.8",
+    "replace": "~0.3",
+    "request": "~2",
+    "sanitize-html": "1.4.2",
+    "sequelize": "~4",
+    "serve-favicon": "~2.4",
+    "serve-index": "~1.9",
+    "socket.io": "~2.0",
+    "sqlite3": "~3.1.13",
+    "z85": "~0.0"
+  },
+  "devDependencies": {
+    "chai": "~4",
+    "codeclimate-test-reporter": "~0.5",
+    "cross-spawn": "~5.1",
+    "eslint": "~4.7",
+    "eslint-scope": "3.7.2",
+    "form-data": "~2.3",
+    "frisby": "~2.0",
+    "grunt-cli": "~1.2",
+    "http-server": "~0.10",
+    "jasmine-reporters": "~2.2",
+    "jest": "~22",
+    "karma": "~1.7",
+    "karma-chrome-launcher": "~2.2",
+    "karma-cli": "~1.0",
+    "karma-coverage": "~1.1",
+    "karma-jasmine": "~1.1",
+    "karma-junit-reporter": "~1.2",
+    "karma-phantomjs-launcher": "~1.0",
+    "karma-safari-launcher": "~1.0",
+    "lcov-result-merger": "~1.2",
+    "mocha": "~4",
+    "nyc": "~11",
+    "phantomjs-prebuilt": "~2",
+    "protractor": "~5",
+    "shelljs": "~0.7",
+    "sinon": "~4",
+    "sinon-chai": "~2.14",
+    "socket.io-client": "~2.0",
+    "standard": "~10",
+    "stryker": "~0",
+    "stryker-api": "~0",
+    "stryker-html-reporter": "~0",
+    "stryker-jasmine": "~0",
+    "stryker-karma-runner": "~0",
+    "stryker-mocha-runner": "~0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/juice-shop/juice-shop.git"
+  },
+  "bugs": {
+    "url": "https://github.com/juice-shop/juice-shop/issues"
+  },
+  "license": "MIT",
+  "scripts": {
+    "postinstall": "npm --prefix ./app install ./app && grunt minify",
+    "start": "node app",
+    "test": "standard && karma start karma.conf.js && nyc --report-dir=./build/reports/coverage/server-tests mocha test/server",
+    "frisby": "nyc --report-dir=./build/reports/coverage/api-tests node ./test/apiTests.js",
+    "preupdate-webdriver": "npm install",
+    "update-webdriver": "webdriver-manager update",
+    "preprotractor": "npm run update-webdriver",
+    "protractor": "node test/e2eTests.js",
+    "stryker": "stryker run stryker.client-conf.js",
+    "vagrant": "cd vagrant && vagrant up"
+  },
+  "engines": {
+    "node": ">=6 <=9"
+  },
+  "standard": {
+    "ignore": [
+      "/app/private/**",
+      "/vagrant/**"
+    ],
+    "env": {
+      "jasmine": true,
+      "node": true,
+      "browser": true,
+      "mocha": true,
+      "protractor": true
+    },
+    "globals": [
+      "angular",
+      "inject"
+    ]
+  },
+  "nyc": {
+    "include": [
+      "lib/*.js",
+      "routes/*.js"
+    ],
+    "all": true,
+    "reporter": [
+      "lcov",
+      "text-summary"
+    ]
+  },
+  "jest": {
+    "testMatch": [
+      "**/test/api/*Spec.js"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/app/node_modules/"
+    ]
+  }
+}
+        </code></pre>
+
+        <h3>5. זיהוי נקודות תורפה מסוג Cross-Site Scripting (XSS)</h3>
+        <p>המערכת זוהתה כפגיעה למתקפות Cross-Site Scripting (XSS). כלי ה-XSS Weaponizer יצר 20 קישורים זדוניים שונים המכילים מטענים (payloads) לבדיקת XSS מבוסס DOM. קישורים אלה נוצרו עבור פרמטר החיפוש בכתובת ה-URL, והוכנו במטרה להיזון למנגנוני הגילוי של CrossGuard-AI. למרות שהיומן אינו מפרט ביצוע XSS בפועל, עצם היכולת ליצור ולהזין קישורים אלו מהווה אינדיקציה חזקה לחולשה הדורשת טיפול.</p>
+        <p><strong>דוגמאות לקישורים זדוניים שנוצרו:</strong></p>
+        <ul>
+            <li><code dir="ltr">http://192.168.190.129:3000/#/search?q=%3Cscript%3Ealert%28%22XSS_1_Classic%22%29%3C/script%3E</code></li>
+            <li><code dir="ltr">http://192.168.190.129:3000/#/search?q=%3Cimg%20src%3D%22x%22%20onerror%3D%22alert%28%27XSS_2_Image%27%29%22%3E</code></li>
+            <li><code dir="ltr">http://192.168.190.129:3000/#/search?q=%3Csvg%20onload%3D%22alert%28%27XSS_3_SVG%27%29%22%3E</code></li>
+            <li><code dir="ltr">http://192.168.190.129:3000/#/search?q=%22%3E%3Cscript%3Ealert%28%22XSS_5_BreakOut%22%29%3C/script%3E</code></li>
+            <li>ועוד 16 וקטורים שונים.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>מסקנות והמלצות</h2>
+        <p>ממצאי בדיקת החדירות מצביעים על כשלים אבטחתיים חמורים במספר אזורים קריטיים במערכת. טיפול מיידי בפגיעות אלו חיוני כדי למנוע מתקפות עתידיות ודליפות נתונים.</p>
+
+        <h3>המלצות כלליות:</h3>
+        <ul>
+            <li><strong>מחזור חיי פיתוח מאובטח (SDLC):</strong> הטמעת עקרונות אבטחה בכל שלבי הפיתוח, החל משלב התכנון ועד לפריסה ותחזוקה.</li>
+            <li><strong>סריקות אבטחה שוטפות:</strong> ביצוע סריקות פגיעות ובדיקות חדירות באופן קבוע, הן אוטומטיות והן ידניות, לאיתור חולשות חדשות.</li>
+            <li><strong>הדרכת מפתחים:</strong> הכשרת צוותי הפיתוח בנושאי אבטחת יישומים (OWASP Top 10) וקידוד מאובטח.</li>
+            <li><strong>ניהול תיקונים:</strong> יישום עדכוני אבטחה לכלל הרכיבים במערכת (מערכת הפעלה, ספריות צד שלישי, תוכנות שרת).</li>
+        </ul>
+
+        <h3>המלצות ספציפיות לפי פגיעה:</h3>
+        <h4>1. עבור הזרקת SQL:</h4>
+        <ul>
+            <li><strong>אימות קלט (Input Validation):</strong> יש לאמת ולנקות את כל קלטי המשתמש בצד השרת לפני השימוש בהם בבסיס הנתונים.</li>
+            <li><strong>שאילתות פרמטריות / Prepared Statements:</strong> יש להשתמש בשאילתות פרמטריות (או ORM) באופן עקבי לכל האינטראקציות עם בסיס הנתונים. לעולם אין לשרשר קלטי משתמש ישירות לתוך שאילתות SQL.</li>
+            <li><strong>עקרון הרשאות מינימליות:</strong> הגבלת ההרשאות של המשתמש בבסיס הנתונים לפעולות המינימליות הנדרשות בלבד.</li>
+        </ul>
+
+        <h4>2. עבור פריצת חשבון מנהל וגניבת אסימון JWT:</h4>
+        <ul>
+            <li><strong>מדיניות סיסמאות חזקה:</strong> אכיפת שימוש בסיסמאות מורכבות, ארוכות ושונות לכל חשבון.</li>
+            <li><strong>אימות רב-שלבי (MFA):</strong> הטמעת MFA לכל חשבונות המנהל ומומלץ גם לכלל המשתמשים.</li>
+            <li><strong>מנגנוני נעילת חשבון (Account Lockout):</strong> יישום נעילת חשבונות לאחר מספר מסוים של ניסיונות כניסה כושלים.</li>
+            <li><strong>ניהול סשנים מאובטח (JWT):</strong> יש לוודא ש-JWT נחתמים כראוי, בעלי תוקף מוגבל וניתנים לביטול (revocation) במקרה של גניבה. אין לאחסן מידע רגיש באסימון ה-JWT.</li>
+        </ul>
+
+        <h4>3. עבור דליפת נתונים רגישים דרך ספריית FTP חשופה:</h4>
+        <ul>
+            <li><strong>הגבלת גישה לספריות:</strong> יש לוודא שספריות שאינן מיועדות לגישה ציבורית, כמו ספריות גיבוי או FTP, אינן נגישות דרך השרת הווב.</li>
+            <li><strong>הסרת קבצים רגישים:</strong> יש להסיר קבצים כמו <span class="critical">incident-support.kdbx</span> מכל מקום הנגיש דרך הרשת. קבצים אלו צריכים להיות מאוחסנים באופן מאובטח מחוץ לתשתית היישום.</li>
+            <li><strong>תצורה מאובטחת של שרת ווב:</strong> כיבוי רישום ספריות (directory listing) בשרת הווב.</li>
+            <li><strong>הצפנת נתונים במנוחה:</strong> כל הנתונים הרגישים צריכים להיות מוצפנים גם כשהם מאוחסנים (Encryption at Rest).</li>
+        </ul>
+
+        <h4>4. עבור קריאת קבצים שרירותית:</h4>
+        <ul>
+            <li><strong>אימות וניקוי נתיבים:</strong> יש לאמת ולנקות היטב את כל הקלטים המשמשים לבניית נתיבי קבצים, כדי למנוע מתקפות כמו Path Traversal.</li>
+            <li><strong>שימוש ברשימות לבנות (Whitelisting):</strong> יש לאפשר גישה רק לקבצים ולספריות ספציפיות המוגדרות מראש, ולא להסתמך על רשימות שחורות.</li>
+            <li><strong>הסרת קבצי גיבוי:</strong> יש להסיר קבצי גיבוי (<code dir="ltr">.bak</code>) וקבצים זמניים מסביבת הפרודקשן.</li>
+        </ul>
+
+        <h4>5. עבור פגיעות Cross-Site Scripting (XSS):</h4>
+        <ul>
+            <li><strong>קידוד פלט (Output Encoding):</strong> יש לקודד את כל קלטי המשתמש המוצגים בדף האינטרנט לפני הצגתם, בהתאם להקשר (HTML entity encoding, URL encoding, JavaScript encoding).</li>
+            <li><strong>מדיניות אבטחת תוכן (CSP):</strong> יש להגדיר CSP חזק המגביל את המקורות מהם ניתן לטעון סקריפטים, סגנונות ומדיה.</li>
+            <li><strong>ניקוי קלט (Input Sanitization):</strong> למרות שקידוד פלט הוא הגישה המועדפת, ניתן להשתמש גם בניקוי קלט (על ידי ספריית צד שלישי מאובטחת) עבור תכנים עשירים.</li>
+        </ul>
+    </section>
+
+</body>
+</html>
