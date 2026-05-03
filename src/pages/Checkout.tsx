@@ -133,7 +133,7 @@ export default function Checkout() {
         data: { session },
       } = await getCurrentSession();
 
-      const response = await fetch("http://localhost:3001/api/checkout", {
+      const response = await fetch("/api/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

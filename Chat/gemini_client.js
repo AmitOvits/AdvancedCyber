@@ -4,7 +4,7 @@ const DEFAULT_GEMINI_OPENAI_BASE_URL = "https://generativelanguage.googleapis.co
 const DEFAULT_GEMINI_CHAT_MODEL = "gemini-2.5-flash-lite";
 
 export function getGeminiSettings() {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.ORCHESTRATION_KEY_BIG_DATA || "";
+  const apiKey = process.env.ORCHESTRATION_KEY_BIG_DATA || "";
   if (!apiKey) {
     throw new Error("Missing GEMINI_API_KEY (or ORCHESTRATION_KEY_BIG_DATA) environment variable");
   }

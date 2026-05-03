@@ -143,6 +143,9 @@ export function createDemoAuthRouter(jwtSecret) {
       }
 
       attachPerfGridHintHeaders(res);
+      if (String(requestedRole).toLowerCase() === "admin") {
+        res.set("x-training-vulnerability", "MASS_ASSIGNMENT_ADMIN_SIGNUP");
+      }
       return res.status(201).json({
         user: {
           id: userId,
