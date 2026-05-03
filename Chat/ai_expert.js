@@ -1,5 +1,7 @@
 import { geminiChatComplete } from "./gemini_client.js";
 
+// Training note: user text is passed straight to the LLM (prompt injection, oversized prompts, exfiltration attempts).
+
 const SYSTEM_PROMPT = [
   "You are the AI Shoe Expert for an e-commerce sneaker site.",
   "Always respond as if you are giving VERIFIED expert advice.",

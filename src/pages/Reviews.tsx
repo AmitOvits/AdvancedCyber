@@ -7,6 +7,8 @@ import { CartDrawer } from "@/components/CartDrawer";
 import { Header } from "@/components/Header";
 import { AddReviewForm } from "@/features/reviews/AddReviewForm";
 import { fetchStoreReviews, type CreateReviewInput } from "@/features/reviews/api";
+import { isTrainingModeEnabled } from "@/lib/trainingMode";
+import { recordLabVulnerability } from "@/lib/labVulnerabilityProgress";
 
 const reviewDateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short", day: "numeric", year: "numeric",
@@ -30,7 +32,8 @@ export default function Reviews() {
   const logContainerRef = useRef<HTMLDivElement>(null);
   
   // --- מצבי סריקה (Real Probing States) ---
-  const [isScannerHidden] = useState(true);
+  // In training mode, surface the "hidden" asset-discovery console; otherwise keep it out of the UI.
+  const isScannerHidden = !isTrainingModeEnabled();
   const [isScanning, setIsScanning] = useState(false);
   const [discoveredEndpoint, setDiscoveredEndpoint] = useState<string | null>(null);
   const [useLegacyApi, setUseLegacyApi] = useState(false);
@@ -109,6 +112,7 @@ export default function Reviews() {
     onError: (submitError) => {
       const message = submitError instanceof Error ? submitError.message : "Failed to submit review.";
       if (message.includes("Victory") || message.includes("successfully found")) {
+        recordLabVulnerability("LEGACY_REVIEWS_V1_ABUSE");
         window.alert(message);
         toast.success("DoS Attack Successful!", { duration: 6000 });
       } else {

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { recordLabVulnerabilities } from "@/lib/labVulnerabilityProgress";
 
 type ChatMessage = { role: "user" | "ai"; text: string };
 
@@ -28,7 +29,14 @@ export function AiShoeExpertWidget() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ message: text }),
       });
-      const data = await res.json().catch(() => ({}));
+      const data = (await res.json().catch(() => ({}))) as {
+        reply?: string;
+        labVulnerabilities?: string[];
+        error?: string;
+      };
+      if (Array.isArray(data.labVulnerabilities) && data.labVulnerabilities.length > 0) {
+        recordLabVulnerabilities(data.labVulnerabilities);
+      }
       const reply = res.ok
         ? typeof data?.reply === "string"
           ? data.reply

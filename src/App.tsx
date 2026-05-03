@@ -16,6 +16,7 @@ import Collections from "./pages/Collections.tsx";
 import Checkout from "./pages/Checkout.tsx";
 import { OrderDetailPage, OrdersPage } from "./pages/Orders.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import LabProgress from "./pages/LabProgress.tsx";
 import { AiShoeExpertWidget } from "@/components/AiShoeExpertWidget";
 import { GlobalUrcAlertWatcher } from "@/components/GlobalUrcAlertWatcher";
 
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/auth/sign-in" element={<Auth />} />
               <Route path="/auth/sign-up" element={<Auth />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/lab/progress" element={<LabProgress />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
