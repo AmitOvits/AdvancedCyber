@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { recordLabVulnerability } from "@/lib/labVulnerabilityProgress";
 type UrcAlert = {
   id: number;
   vulnerability: string;
@@ -76,6 +77,7 @@ export function GlobalUrcAlertWatcher() {
           if (lastSeenUrcIdRef.current !== alertData.id) {
             lastSeenUrcIdRef.current = alertData.id;
             writeStoredAlertId(STORAGE_LAST_URC_ID, alertData.id);
+            recordLabVulnerability("URC_DETECTED");
             alert(
               `🚨 Unrestricted Resource Consumption vulnerability found!\n\n` +
                 `${alertData.message}\n` +
@@ -91,6 +93,7 @@ export function GlobalUrcAlertWatcher() {
           if (lastSeenPathTraversalIdRef.current !== pt.id) {
             lastSeenPathTraversalIdRef.current = pt.id;
             writeStoredAlertId(STORAGE_LAST_PT_ID, pt.id);
+            recordLabVulnerability("PATH_TRAVERSAL_CONFIRMED");
             alert(
               `${PATH_TRAVERSAL_SUCCESS_MESSAGE}\n\n${pt.message}\n` +
                 `path: ${pt.path}\n` +

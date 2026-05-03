@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { ShoppingBag, CreditCard, MapPin, CheckCircle, Lightbulb, Skull } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { recordLabVulnerability } from "@/lib/labVulnerabilityProgress";
 
 async function readCheckoutError(response: Response) {
   try {
@@ -154,6 +155,7 @@ export default function Checkout() {
       clearCart();
 
       if (responseData.isHacked) {
+        recordLabVulnerability("INSECURE_DESERIALIZATION_CHECKOUT");
         setHackedSuccess(true);
       } else {
         setOrderPlaced(true);

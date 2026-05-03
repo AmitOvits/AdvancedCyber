@@ -16,17 +16,14 @@ export function createReviewsV1Router() {
   router.post("/", async (req, res) => {
     const { authorName, rating, title, body } = req.body;
 
-    // חולשת DoS (API4)
+    // חולשת DoS / legacy validation gap (API4 class): oversized body accepted, then expensive work.
+    // Lab: bounded work only — a real deployment might loop unbounded; here we flag the weakness safely.
     if (body && body.length > 500) {
-      console.log("🚨 [V1] ATTACK DETECTED: Running heavy loop...");
-      
-      let dummyCalculation = 0;
-      for (let i = 0; i < 15000000000; i++) { 
-        dummyCalculation += i;
-      }
-      
-      return res.status(400).json({ 
-        error: "🏆 Victory! You exploited API9 by finding an unpatched legacy endpoint (/v1/) and triggered a DoS!" 
+      console.log("🚨 [V1] ATTACK DETECTED: legacy endpoint accepted abusive payload (training flag).");
+      res.set("x-training-vulnerability", "LEGACY_REVIEWS_V1_ABUSE");
+      return res.status(400).json({
+        error:
+          "🏆 Victory! You exploited API9 by finding an unpatched legacy endpoint (/v1/) and triggered a DoS-class abuse path!",
       });
     }
 

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { fetchMyOrdersInsecure, fetchOrderByNumberInsecure, fetchOrderItems } from "@/features/orders/api";
+import { recordLabVulnerability } from "@/lib/labVulnerabilityProgress";
 
 function statusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
   switch (status) {
@@ -172,6 +173,7 @@ export function OrderDetailPage() {
     }
 
     alertedOrderIdRef.current = order.id;
+    recordLabVulnerability("BOLA_IDOR_ORDER");
     alert(
       `🚨 BOLA VULNERABILITY EXPLOITED! 🚨\n\n` +
         `You accessed another user's order via URL tampering.\n` +

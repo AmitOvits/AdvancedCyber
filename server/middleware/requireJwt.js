@@ -15,6 +15,9 @@ export function createRequireJwt(jwtSecret) {
 
     try {
       req.user = jwt.verify(token, jwtSecret);
+      if (queryToken) {
+        res.set("x-training-vulnerability", "JWT_QUERY_PARAMETER_TOKEN");
+      }
       return next();
     } catch {
       return res.status(401).json({ error: "Invalid token" });
