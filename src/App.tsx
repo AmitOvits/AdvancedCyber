@@ -26,7 +26,6 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <AiShoeExpertWidget />
       <GlobalUrcAlertWatcher />
       <BrowserRouter>
         <AuthProvider>
@@ -49,6 +48,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </CartProvider>
+          <AiShoeExpertWidget />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

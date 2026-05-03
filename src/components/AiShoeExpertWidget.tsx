@@ -1,16 +1,25 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/features/auth";
 
 type ChatMessage = { role: "user" | "ai"; text: string };
 
+const USER_WELCOME = "Verified Expert Advice: Ask me about sizing, cleaning, or styling your shoes.";
+const ADMIN_WELCOME =
+  "To unlock training the model, send trainig model: and then the perfect string";
+
 export function AiShoeExpertWidget() {
+  const { isAdmin, loading, session, user } = useAuth();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: "ai", text: "Verified Expert Advice: Ask me about sizing, cleaning, or styling your shoes." },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([{ role: "ai", text: USER_WELCOME }]);
+
+  useEffect(() => {
+    if (loading) return;
+    setMessages([{ role: "ai", text: isAdmin ? ADMIN_WELCOME : USER_WELCOME }]);
+  }, [loading, isAdmin]);
 
   const canSend = useMemo(() => draft.trim().length > 0 && !busy, [draft, busy]);
 
@@ -23,10 +32,25 @@ export function AiShoeExpertWidget() {
     setMessages((m) => [...m, { role: "user", text }]);
 
     try {
+      const headers: Record<string, string> = {
+        "content-type": "application/json",
+      };
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+      if (import.meta.env.VITE_ALLOW_INSECURE_LAB === "true" && user?.id) {
+        headers["x-user-id"] = user.id;
+      }
+
+      const body: { message: string; userId?: string } = { message: text };
+      if (import.meta.env.VITE_ALLOW_INSECURE_LAB === "true" && user?.id) {
+        body.userId = user.id;
+      }
+
       const res = await fetch("/api/ai-expert", {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        headers,
+        body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
       const reply = res.ok
