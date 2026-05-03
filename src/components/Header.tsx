@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/features/auth";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, Menu, User, LogOut, Shield, X, Receipt } from "lucide-react";
+import { ShoppingBag, Menu, User, LogOut, Shield, X, Receipt, Crosshair } from "lucide-react";
+import { shouldShowLabProgressNav } from "@/lib/labVulnerabilityProgress";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { TrainingModeBanner } from "@/components/TrainingModeBanner";
@@ -22,6 +23,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   const { totalItems, setIsCartOpen } = useCart();
   const { user, isAdmin, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const showLabProgress = shouldShowLabProgressNav();
 
   return (
     <>
@@ -50,6 +52,15 @@ export function Header({ onToggleSidebar }: HeaderProps) {
             <Link to="/brands" className="text-muted-foreground hover:text-foreground transition-colors">Brands</Link>
             <Link to="/reviews" className="text-muted-foreground hover:text-foreground transition-colors">Reviews</Link>
             <Link to="/about" className="text-muted-foreground hover:text-foreground transition-colors">About</Link>
+            {showLabProgress && (
+              <Link
+                to="/lab/progress"
+                className="text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1.5"
+              >
+                <Crosshair className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                Lab progress
+              </Link>
+            )}
           </nav>
 
           <div className="flex items-center gap-1">
@@ -121,6 +132,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                 { label: "Brands", href: "/brands" },
                 { label: "Reviews", href: "/reviews" },
                 { label: "About", href: "/about" },
+                ...(showLabProgress ? [{ label: "Lab progress", href: "/lab/progress" }] : []),
               ].map((item) => (
                 <Link
                   key={item.label}

@@ -13,8 +13,19 @@ export default defineConfig(({ mode }) => ({
     },
     proxy: {
       "/api": {
-        target: "http://localhost:3001",
+        target: "http://127.0.0.1:3001",
         changeOrigin: true,
+        configure(proxy) {
+          proxy.on("proxyRes", (proxyRes) => {
+            const expose = proxyRes.headers["access-control-expose-headers"];
+            const ours = "x-training-vulnerability";
+            if (!expose || String(expose).split(",").every((h) => h.trim().toLowerCase() !== ours)) {
+              proxyRes.headers["access-control-expose-headers"] = expose
+                ? `${expose}, ${ours}`
+                : ours;
+            }
+          });
+        },
       },
     },
   },

@@ -1,0 +1,7 @@
+CLASS_LAB{path_traversal_internal_vault}
+
+You reached this file inside the vault (e.g. name=internal/LAB_FLAG.txt).
+
+Next challenge: escape the sandbox with parent-directory segments in the name= query.
+From server/labVault you typically go up with ../ (repeat as needed until you reach the project root).
+Then try names like .env, package.json, package-lock.json, or README.md at that level.

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { z } from "zod";
 
 export type StoreReviewRow = Database["public"]["Tables"]["store_reviews"]["Row"];
 
@@ -12,6 +13,16 @@ export interface StoreReview {
   isFeatured: boolean;
   createdAt: string;
 }
+
+export const createReviewSchema = z.object({
+  authorName: z.string().trim().min(1, "Author name is required."),
+  rating: z.coerce.number().min(1, "Rating must be at least 1.").max(5, "Rating cannot exceed 5."),
+  title: z.string().trim().min(1, "Title is required."),
+  body: z.string().trim().min(1, "Review body is required."),
+  isFeatured: z.boolean().default(false),
+});
+
+export type CreateReviewInput = z.infer<typeof createReviewSchema>;
 
 export function mapStoreReviewRow(row: StoreReviewRow): StoreReview {
   return {
@@ -37,4 +48,31 @@ export async function fetchStoreReviews() {
   }
 
   return (data ?? []).map(mapStoreReviewRow);
+}
+
+async function readApiError(response: Response) {
+  try {
+    const payload = (await response.json()) as { error?: string };
+    return payload.error ?? `Request failed with status ${response.status}.`;
+  } catch {
+    return `Request failed with status ${response.status}.`;
+  }
+}
+
+export async function createStoreReview(input: CreateReviewInput) {
+  const payload = createReviewSchema.parse(input);
+  const response = await fetch("/api/v2/reviews", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+
+  const body = (await response.json()) as { review: StoreReviewRow };
+  return mapStoreReviewRow(body.review);
 }

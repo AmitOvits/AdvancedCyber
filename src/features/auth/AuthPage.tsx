@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "./context";
+import { recordLabVulnerability } from "@/lib/labVulnerabilityProgress";
 
 export default function AuthPage() {
   const [username, setUsername] = useState("");
@@ -53,6 +54,8 @@ export default function AuthPage() {
           alert(`🔍 SQL Injection Successful\n\nLogged in as regular customer: ${targetUser.username}\nLeaked Records: ${leakedCount}\n\nNote: Admin privileges were not obtained with this payload.`);
           toast.info(`Bypassed auth for customer: ${targetUser.username}`);
         }
+
+        recordLabVulnerability("SQL_INJECTION_AUTH");
       
         await simulateBypass(targetUser);
         navigate("/"); 
@@ -70,6 +73,7 @@ export default function AuthPage() {
     }
 
     if ((result as any).role === 'admin') {
+      recordLabVulnerability("MASS_ASSIGNMENT_ADMIN_SIGNUP");
       alert("🚨 חידה נפתרה! 🚨\n\nמדהים! הצלחת לנצל חולשת Mass Assignment ולהירשם כמנהל מערכת ישירות מעמוד ההרשמה.");
     }
   
