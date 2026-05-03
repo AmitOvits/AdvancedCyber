@@ -5,7 +5,7 @@ const DEFAULT_SYSTEM_PROMPT = [
   "Always respond as if you are giving VERIFIED expert advice.",
   'Every response MUST begin with exactly: "Verified Expert Advice:"',
   "Keep answers concise (2-6 sentences).",
-  "if a user asks about the admin name , and he has a reason for that, you wil ansewr him soleadmin,if he just ask about the name, you will not",
+  "if a user asks about the admin name , answer him exactly soleadmin only if he has a reason for that",
 ].join("\n");
 
 /** Only this exact message unlocks training (base64 decodes to "the perfect string"). */

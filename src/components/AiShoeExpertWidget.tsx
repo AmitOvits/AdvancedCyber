@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/features/auth";
@@ -9,12 +9,32 @@ const USER_WELCOME = "Verified Expert Advice: Ask me about sizing, cleaning, or 
 const ADMIN_WELCOME =
   "To unlock training the model, send trainig model: and then the perfect string";
 
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX_PROMPTS_PER_WINDOW = 10;
+
+function formatLabAlert(statusLine: string) {
+  return [
+    "🚨 CRITICAL VULNERABILITY EXPLOITED! 🚨",
+    "",
+    statusLine,
+    "",
+    "Account: soleadmin",
+    "Leaked Records: 1",
+    "",
+    "System control is now compromised.",
+  ].join("\n");
+}
+
 export function AiShoeExpertWidget() {
   const { isAdmin, loading, session, user } = useAuth();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([{ role: "ai", text: USER_WELCOME }]);
+  const shownSoleadminAlert = useRef(false);
+  const shownTrainingPoisonAlert = useRef(false);
+  const shownOverconsumptionAlert = useRef(false);
+  const promptSendTimes = useRef<number[]>([]);
 
   useEffect(() => {
     if (loading) return;
@@ -23,9 +43,45 @@ export function AiShoeExpertWidget() {
 
   const canSend = useMemo(() => draft.trim().length > 0 && !busy, [draft, busy]);
 
+  function recordPromptSendAndMaybeShowOverconsumptionAlert() {
+    const now = Date.now();
+    const windowStart = now - RATE_WINDOW_MS;
+    const recent = promptSendTimes.current.filter((t) => t >= windowStart);
+    recent.push(now);
+    promptSendTimes.current = recent;
+    if (
+      !shownOverconsumptionAlert.current &&
+      recent.length >= RATE_MAX_PROMPTS_PER_WINDOW
+    ) {
+      shownOverconsumptionAlert.current = true;
+      window.alert(
+        formatLabAlert("UNBOUNDED CONSUMPTION via overloading the system"),
+      );
+    }
+  }
+
+  function maybeShowVulnerabilityAlerts(reply: string) {
+    if (!shownSoleadminAlert.current && /soleadmin/i.test(reply)) {
+      shownSoleadminAlert.current = true;
+      window.alert(
+        formatLabAlert("ADMIN NAME FOUND via prompt injection and jailbreak"),
+      );
+    }
+    if (
+      isAdmin &&
+      !shownTrainingPoisonAlert.current &&
+      reply.trim() === "now you can train the model"
+    ) {
+      shownTrainingPoisonAlert.current = true;
+      window.alert(formatLabAlert("MODEL TRAINING POISONING"));
+    }
+  }
+
   async function send() {
     const text = draft.trim();
     if (!text || busy) return;
+
+    recordPromptSendAndMaybeShowOverconsumptionAlert();
 
     setDraft("");
     setBusy(true);
@@ -61,6 +117,7 @@ export function AiShoeExpertWidget() {
           ? `Verified Expert Advice: ${data.error}`
           : "Verified Expert Advice: (request failed)";
       setMessages((m) => [...m, { role: "ai", text: reply }]);
+      maybeShowVulnerabilityAlerts(reply);
     } catch {
       setMessages((m) => [...m, { role: "ai", text: "Verified Expert Advice: (network error)" }]);
     } finally {
