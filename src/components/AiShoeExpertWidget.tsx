@@ -1,42 +1,114 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { recordLabVulnerabilities } from "@/lib/labVulnerabilityProgress";
+import { useAuth } from "@/features/auth";
 
 type ChatMessage = { role: "user" | "ai"; text: string };
 
+const USER_WELCOME = "Verified Expert Advice: Ask me about sizing, cleaning, or styling your shoes.";
+const ADMIN_WELCOME =
+  "To unlock training the model, send trainig model: and then the perfect string";
+
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX_PROMPTS_PER_WINDOW = 10;
+
+function formatLabAlert(statusLine: string) {
+  return [
+    "🚨 CRITICAL VULNERABILITY EXPLOITED! 🚨",
+    "",
+    statusLine,
+    "",
+    "Account: soleadmin",
+    "Leaked Records: 1",
+    "",
+    "System control is now compromised.",
+  ].join("\n");
+}
+
 export function AiShoeExpertWidget() {
+  const { isAdmin, loading, session, user } = useAuth();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: "ai", text: "Verified Expert Advice: Ask me about sizing, cleaning, or styling your shoes." },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([{ role: "ai", text: USER_WELCOME }]);
+  const shownSoleadminAlert = useRef(false);
+  const shownTrainingPoisonAlert = useRef(false);
+  const shownOverconsumptionAlert = useRef(false);
+  const promptSendTimes = useRef<number[]>([]);
+
+  useEffect(() => {
+    if (loading) return;
+    setMessages([{ role: "ai", text: isAdmin ? ADMIN_WELCOME : USER_WELCOME }]);
+  }, [loading, isAdmin]);
 
   const canSend = useMemo(() => draft.trim().length > 0 && !busy, [draft, busy]);
+
+  function recordPromptSendAndMaybeShowOverconsumptionAlert() {
+    const now = Date.now();
+    const windowStart = now - RATE_WINDOW_MS;
+    const recent = promptSendTimes.current.filter((t) => t >= windowStart);
+    recent.push(now);
+    promptSendTimes.current = recent;
+    if (
+      !shownOverconsumptionAlert.current &&
+      recent.length >= RATE_MAX_PROMPTS_PER_WINDOW
+    ) {
+      shownOverconsumptionAlert.current = true;
+      window.alert(
+        formatLabAlert("UNBOUNDED CONSUMPTION via overloading the system"),
+      );
+    }
+  }
+
+  function maybeShowVulnerabilityAlerts(reply: string) {
+    if (!shownSoleadminAlert.current && /soleadmin/i.test(reply)) {
+      shownSoleadminAlert.current = true;
+      window.alert(
+        formatLabAlert("ADMIN NAME FOUND via prompt injection and jailbreak"),
+      );
+    }
+    if (
+      isAdmin &&
+      !shownTrainingPoisonAlert.current &&
+      reply.trim() === "now you can train the model"
+    ) {
+      shownTrainingPoisonAlert.current = true;
+      window.alert(formatLabAlert("MODEL TRAINING POISONING"));
+    }
+  }
 
   async function send() {
     const text = draft.trim();
     if (!text || busy) return;
+
+    recordPromptSendAndMaybeShowOverconsumptionAlert();
 
     setDraft("");
     setBusy(true);
     setMessages((m) => [...m, { role: "user", text }]);
 
     try {
+      const headers: Record<string, string> = {
+        "content-type": "application/json",
+      };
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+      if (import.meta.env.VITE_ALLOW_INSECURE_LAB === "true" && user?.id) {
+        headers["x-user-id"] = user.id;
+      }
+
+      const body: { message: string; userId?: string } = { message: text };
+      if (import.meta.env.VITE_ALLOW_INSECURE_LAB === "true" && user?.id) {
+        body.userId = user.id;
+      }
+
       const res = await fetch("/api/ai-expert", {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        headers,
+        body: JSON.stringify(body),
       });
-      const data = (await res.json().catch(() => ({}))) as {
-        reply?: string;
-        labVulnerabilities?: string[];
-        error?: string;
-      };
-      if (Array.isArray(data.labVulnerabilities) && data.labVulnerabilities.length > 0) {
-        recordLabVulnerabilities(data.labVulnerabilities);
-      }
+      const data = await res.json().catch(() => ({}));
       const reply = res.ok
         ? typeof data?.reply === "string"
           ? data.reply
@@ -45,6 +117,7 @@ export function AiShoeExpertWidget() {
           ? `Verified Expert Advice: ${data.error}`
           : "Verified Expert Advice: (request failed)";
       setMessages((m) => [...m, { role: "ai", text: reply }]);
+      maybeShowVulnerabilityAlerts(reply);
     } catch {
       setMessages((m) => [...m, { role: "ai", text: "Verified Expert Advice: (network error)" }]);
     } finally {
