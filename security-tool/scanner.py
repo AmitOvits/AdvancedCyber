@@ -549,7 +549,7 @@ EXPLOIT_ROUTER = {
 
     "path traversal": run_remote_lfi_extractor,
 
-    "exposed directory listing": run_ftp_data_pillager,
+    "exposed directory": run_ftp_data_pillager,
     
     # מכת המחץ המרובעת!
     "injection": [
