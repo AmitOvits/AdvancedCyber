@@ -12,6 +12,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
+    "start": "node server.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "lab:ftp-files": "node scripts/create-ftp-lab-files.mjs"

@@ -199,10 +199,9 @@ def run_remote_sqlmap(target_url: str, param: str, kali_ip: str) -> None:
     # משחרר את הנעילה של ה-Hijacker
     EXPLOIT_CONTEXT["sqlmap_finished"].set()
 
-def run_remote_dirb(target_url: str, kali_ip: str) -> None:
+def run_remote_dirb(target_url: str, kali_ip: str, results_list: list) -> None:
     print(f"\n[*] Launching Dirb for directory discovery on: {target_url}")
     
-    # משיכת פרטי ההתחברות מה-.env
     username = os.getenv("KALI_USER", "kali")
     password = os.getenv("KALI_PASSWORD", "kali")
     
@@ -210,20 +209,30 @@ def run_remote_dirb(target_url: str, kali_ip: str) -> None:
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     
     try:
-        print(f"[*] Connecting to Kali ({kali_ip}) via SSH...")
         ssh.connect(hostname=kali_ip, username=username, password=password)
         
-        # בניית הפקודה - Dirb סורק את כתובת הבסיס שמצאנו
         dirb_cmd = f"dirb {target_url} -S" 
         print(f"[*] Executing payload: {dirb_cmd}")
         
-        # הרצה
         stdin, stdout, stderr = ssh.exec_command(dirb_cmd)
         output = stdout.read().decode('utf-8')
         
         print("\n=== DIRB OUTPUT ===")
         print(output)
         print("=====================\n")
+        
+        # === התוספת החדשה: קריאת הפלט של Dirb והזנתו לנתב ===
+        for line in output.split('\n'):
+            if line.startswith('+ http'):
+                found_url = line.split(' ')[1]
+                # מכניסים את הממצא באותו פורמט ש-ZAP עובד איתו!
+                results_list.append({
+                    "alert": "Exposed Directory",
+                    "url": found_url,
+                    "risk": "Medium",
+                    "source": "Dirb"
+                })
+        print(f"[+] Dirb scan completed. Fed {len(results_list)} directories to the Router.")
             
     except Exception as e:
         print(f"[-] Directory discovery failed: {e}")
@@ -537,6 +546,10 @@ EXPLOIT_ROUTER = {
     "sql injection": run_remote_sqlmap,
     # הסרנו את commix כי הוא פחות רלוונטי לאפליקציה הזו
     "cross site scripting": run_custom_xss_weaponizer,
+
+    "path traversal": run_remote_lfi_extractor,
+
+    "exposed directory listing": run_ftp_data_pillager,
     
     # מכת המחץ המרובעת!
     "injection": [
@@ -757,7 +770,7 @@ def ai_report_analyzer(raw_logs: str, target_url: str, findings: list):
 def main() -> int:
   args = parse_args()
 
-  # === קסם לאיסוף כל ההדפסות (Print) מכל הפונקציות וה-Threads לטובת ה-AI ===
+  # איסוף לוגים ל-AI (נשאר ללא שינוי)
   terminal_logs = ""
   import builtins
   original_print = builtins.print
@@ -768,31 +781,35 @@ def main() -> int:
       terminal_logs += msg + "\n"
       original_print(*print_args, **kwargs)
 
-  # דורסים את הפרינט הרגיל בפרינט החכם שלנו
   builtins.print = custom_print
-  # =========================================================================
 
   try:
     target_url = validate_target_url(args.target_url)
   except ValueError as exc:
+    builtins.print = original_print
     print(f"[-] {exc}")
     return 1
 
   api_key, kali_ip = load_settings()
   if not api_key:
+    builtins.print = original_print
     print("[-] Missing ZAP_API_KEY in security-tool/.env.")
     return 1
 
   try:
     print(f"\n[*] [PHASE 1] Starting Parallel Scans on: {target_url}")
     
+    # הפעלת Nuclei
     nuclei_alerts = []
     nuclei_thread = threading.Thread(target=run_remote_nuclei, args=(target_url, kali_ip, nuclei_alerts))
     nuclei_thread.start()
 
-    dirb_thread = threading.Thread(target=run_remote_dirb, args=(target_url, kali_ip))
+    # הפעלת Dirb 
+    dirb_alerts = []
+    dirb_thread = threading.Thread(target=run_remote_dirb, args=(target_url, kali_ip, dirb_alerts))
     dirb_thread.start()
 
+    # הפעלת ZAP
     zap = create_zap_client(api_key)
     print(f"[*] ZAP Engine Connected. Initializing spider...")
     zap.urlopen(target_url)
@@ -806,52 +823,60 @@ def main() -> int:
     zap_alerts = fetch_all_alerts(zap)
     print(f"[*] Scanners finished. ZAP found {len(zap_alerts)} alerts.")
     
+    # ממתינים שגם Nuclei וגם Dirb יסיימו 
     nuclei_thread.join() 
     dirb_thread.join()
     
-    # איחוד ממצאים
+    # איחוד ממצאים 
     all_findings = zap_alerts.copy() 
     all_findings.extend(nuclei_alerts)
+    all_findings.extend(dirb_alerts) 
 
     print("\n[*] [PHASE 2] Routing to Specialized Exploit Tools...")
     
     launched_tools = set()
     active_attack_threads = []
     
-    # הרצת הנתב (Router)
+    # תקיפה מבוססת מודיעין (Target-Driven) מהסורקים - ללא הפעלת הגיבוי!
     for finding in all_findings:
         alert_name = finding.get('alert', '').lower()
-        url = finding.get('url', '')
+        url = finding.get('url', '') # מחלצים את ה-URL שהסורק דיווח עליו
         
         for vulnerability_keyword, actions in EXPLOIT_ROUTER.items():
             if vulnerability_keyword in alert_name:
                 funcs_to_run = actions if isinstance(actions, list) else [actions]
+                
                 for attack_function in funcs_to_run:
                     if attack_function.__name__ not in launched_tools:
                         print(f"[*] AI Match: Routing '{vulnerability_keyword}' to {attack_function.__name__}")
-
+                        
+                        # אנחנו מעבירים עכשיו את ה-url הספציפי שבו נמצאה הפגיעות ולא סתם את כתובת האתר הכללית
                         t = threading.Thread(target=attack_function, args=(url, kali_ip))
                         active_attack_threads.append(t)
                         t.start()
                         launched_tools.add(attack_function.__name__)
-                
+
+    # ממתינים לכלים המנותבים לסיים
     if active_attack_threads:
-        print(f"[*] Executing {len(active_attack_threads)} automated exploits...")
+        print(f"\n[*] Executing {len(active_attack_threads)} targeted exploits in the background...")
         for t in active_attack_threads:
             t.join()
+    else:
+        print("\n[*] No matched vulnerabilities to exploit. Exiting Phase 2.")
 
     print("\n[+] All automated tasks completed.")
     
-    # החזרת הפרינט המקורי כדי לא לשבש דברים אחרים בסוף הריצה
+    # החזרת הפרינט המקורי לפני הדו"ח 
     builtins.print = original_print
-
-    # === שלב ה-AI: יצירת הדו"ח החכם עם הפלט שנאסף ===
+    
     ai_report_analyzer(terminal_logs, target_url, all_findings)
 
   except KeyboardInterrupt:
+    builtins.print = original_print
     print("\n[-] Scan interrupted by user.")
     return 130
   except Exception as exc:
+    builtins.print = original_print
     print(f"[-] Scan failed: {exc}")
     return 1
 
