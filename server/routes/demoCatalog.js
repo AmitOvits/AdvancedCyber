@@ -32,82 +32,22 @@ function parsePositiveIntUnbounded(raw, fallback) {
   return n;
 }
 
-function wantsCatalogJson(req) {
-  if (String(req.query.format ?? "").toLowerCase() === "json") {
-    return true;
-  }
-  const accept = req.get("Accept") ?? "";
-  if (accept.includes("application/json") && !accept.includes("text/html")) {
-    return true;
-  }
-  return false;
-}
-
 /*
- * Public /ftp mount — no JWT. Path traversal lab lives here (replaces /api/v2/catalog/inventory-export).
- * GET /ftp — HTML file browser (clickable links) or ?format=json for machine clients.
- * GET /ftp?name=... — file body in browser (text/plain in-vault; traversal lab feedback if outside vault).
+ * Public /ftp?name=... — path traversal lab (no JWT). Listing is served separately
+ * via express.static + serve-index from server/static/ftp (Juice Shop–style files).
  */
-async function sendFtpCatalogFiles(req, res) {
+async function sendFtpLabFileByName(req, res) {
   attachPerfGridHintHeaders(res);
 
   const rawName = req.query.name;
-  const hasName = rawName !== undefined && rawName !== null && String(rawName).trim() !== "";
-
-  if (!hasName) {
-    const base = PATH_TRAVERSAL_LAB_PATH;
-    const entries = [
-      { name: "catalog-note.txt", href: `${base}?name=${encodeURIComponent("catalog-note.txt")}` },
-      { name: "internal/LAB_FLAG.txt", href: `${base}?name=${encodeURIComponent("internal/LAB_FLAG.txt")}` },
-    ];
-
-    if (wantsCatalogJson(req)) {
-      return res.json({
-        message: "Lab file drop (no authentication). Use the HTML index in a browser or open a file URL directly.",
-        files: entries.map((e) => ({ name: e.name, url: e.href })),
-      });
-    }
-
-    const listItems = entries
-      .map(
-        (e) =>
-          `<li><a href="${e.href.replace(/"/g, "&quot;")}">${e.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</a></li>`,
-      )
-      .join("\n");
-
-    return res.status(200).type("html").send(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Catalog files (lab)</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 42rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
-    code { background: #f4f4f4; padding: 0.15em 0.35em; border-radius: 4px; }
-    a { color: #06c; }
-    ul { padding-left: 1.25rem; }
-  </style>
-</head>
-<body>
-  <h1>Catalog files</h1>
-  <p>Public <strong>ftp-style</strong> listing — <em>no token</em>. Click a file to load it in this tab (URL-based).</p>
-  <ul>
-${listItems}
-  </ul>
-  <p><strong>Path traversal lab:</strong> edit the <code>name</code> query in the address bar (e.g. <code>..</code> segments).</p>
-  <p>JSON index: <a href="${base}?format=json"><code>?format=json</code></a></p>
-</body>
-</html>`);
-  }
-
   const name = String(rawName);
 
   // FLAW: Unsanitized user input concatenated into filesystem path (CWE-22).
   const filePath = path.join(LAB_VAULT_DIR, name);
 
-  let data;
+  let buf;
   try {
-    data = await fs.readFile(filePath, "utf8");
+    buf = await fs.readFile(filePath);
   } catch (err) {
     if (err && err.code === "ENOENT") {
       return res.status(404).json({ error: "not_found", hint: PATH_TRAVERSAL_LAB_PATH });
@@ -127,7 +67,7 @@ ${listItems}
       status: "PATH_TRAVERSAL_CONFIRMED",
       message,
       resolvedFileName: path.basename(filePath),
-      bytesRead: Buffer.byteLength(data, "utf8"),
+      bytesRead: buf.length,
     };
 
     res.set("x-training-vulnerability", "PATH_TRAVERSAL_CONFIRMED");
@@ -186,13 +126,28 @@ ${listItems}
     return res.status(200).json(payload);
   }
 
-  return res.status(200).type("text/plain; charset=utf-8").send(data);
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === ".kdbx") {
+    return res.status(200).type("application/octet-stream").send(buf);
+  }
+
+  return res.status(200).type("text/plain; charset=utf-8").send(buf.toString("utf8"));
 }
 
-export function createFtpLabRouter() {
-  const router = express.Router();
-  router.get("/", sendFtpCatalogFiles);
-  return router;
+/** Passes through when `name` is absent so directory listing (serve-index) can run. */
+export function createFtpNameQueryHandler() {
+  return async (req, res, next) => {
+    const rawName = req.query.name;
+    const hasName = rawName !== undefined && rawName !== null && String(rawName).trim() !== "";
+    if (!hasName) {
+      return next();
+    }
+    try {
+      await sendFtpLabFileByName(req, res);
+    } catch (err) {
+      next(err);
+    }
+  };
 }
 
 export function createDemoCatalogRouter({ requireJwt, publicAccess = false }) {

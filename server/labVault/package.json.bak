@@ -1,0 +1,8 @@
+{
+  "name": "juice-shop",
+  "version": "9.0.0",
+  "description": "Educational vulnerable app — backup artifact for CTF lab only.",
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}
