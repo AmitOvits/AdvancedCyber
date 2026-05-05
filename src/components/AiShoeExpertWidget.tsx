@@ -8,7 +8,7 @@ type ChatMessage = { role: "user" | "ai"; text: string };
 
 const USER_WELCOME = "Verified Expert Advice: Ask me about sizing, cleaning, or styling your shoes.";
 const ADMIN_WELCOME =
-  "To unlock training the model, send trainig model: and then the perfect string";
+  "To unlock training the model, send training model: and then the perfect string";
 
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX_PROMPTS_PER_WINDOW = 5;
