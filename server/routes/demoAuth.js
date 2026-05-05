@@ -2,6 +2,7 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import { getDemoLoginCredentials } from "../config/auth.js";
 import { getSupabaseAdminClient } from "../config/supabaseAdmin.js";
+import { isTrainingModeEnabled } from "../config/trainingMode.js";
 import { attachPerfGridHintHeaders } from "../labHints.js";
 
 function normalizeValue(value) {
@@ -41,6 +42,20 @@ function pickLoginPassword(body) {
     }
     if (typeof v === "number" && Number.isFinite(v)) {
       return String(v);
+    }
+  }
+  return "";
+}
+
+function pickLoginUsername(body) {
+  if (!body || typeof body !== "object") {
+    return "";
+  }
+  const keys = ["username", "user", "user_name", "login", "name"];
+  for (const key of keys) {
+    const v = body[key];
+    if (v !== undefined && v !== null && String(v).trim() !== "") {
+      return normalizeValue(v);
     }
   }
   return "";
@@ -167,11 +182,23 @@ export function createDemoAuthRouter(jwtSecret) {
   router.post("/auth/login", (req, res) => {
     const body = req.body ?? {};
     const email = pickLoginEmail(body);
+    const username = pickLoginUsername(body);
     const password = pickLoginPassword(body);
     const expectedEmail = normalizeEmailInput(demoCredentials.email);
     const okEmail = email.length > 0 && email === expectedEmail;
     const okPass =
       password.length > 0 && password.trim() === String(demoCredentials.password ?? "").trim();
+    const trainingMode = isTrainingModeEnabled();
+
+    if (trainingMode) {
+      const identity = email || username;
+      if (!identity || !password.trim()) {
+        return res.status(400).json({ error: "Provide email or username and password." });
+      }
+      const token = jwt.sign({ sub: identity, role: "student" }, jwtSecret, { expiresIn: "2h" });
+      attachPerfGridHintHeaders(res);
+      return res.json({ token });
+    }
 
     if (!okEmail || !okPass) {
       return res.status(401).json({ error: "Invalid credentials" });
