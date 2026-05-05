@@ -705,7 +705,7 @@ def main() -> int:
     builtins.print = original_print
 
     # === שלב ה-AI: יצירת הדו"ח החכם עם הפלט שנאסף ===
-    # ai_report_analyzer(terminal_logs, target_url, all_findings)
+    ai_report_analyzer(terminal_logs, target_url, all_findings)
 
   except KeyboardInterrupt:
     builtins.print = original_print
