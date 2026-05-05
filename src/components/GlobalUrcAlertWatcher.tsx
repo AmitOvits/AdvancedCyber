@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { recordLabVulnerability } from "@/lib/labVulnerabilityProgress";
+import { isTrainingModeEnabled } from "@/lib/trainingMode";
 type UrcAlert = {
   id: number;
   vulnerability: string;
@@ -52,7 +53,7 @@ export function GlobalUrcAlertWatcher() {
   const lastSeenPathTraversalIdRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!import.meta.env.DEV) {
+    if (!isTrainingModeEnabled()) {
       return;
     }
 

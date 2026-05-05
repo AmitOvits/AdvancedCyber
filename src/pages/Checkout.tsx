@@ -133,7 +133,7 @@ export default function Checkout() {
         data: { session },
       } = await getCurrentSession();
 
-      const response = await fetch("http://localhost:3001/api/checkout", {
+      const response = await fetch("/api/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -187,8 +187,11 @@ export default function Checkout() {
         <div 
           style={{ display: 'none' }} 
           dangerouslySetInnerHTML={{ __html: "<!-- This is a hidden developer note visible only via View Source -->" }} 
+          // --- INSECURE DESERIALIZATION & HIDDEN BACKDOOR (HARD MODE) ---
+          // שימו לב: שינוי של isPremium ל-true לא יעשה כלום (מלכודת!)
+          // כדי לפרוץ, התוקף חייב להזריק אובייקט שלם לתוך ה-JSON המפוענח:
+          // "__internal_config":{"admin_override":"true"}
         />
-
         {/* Hints mechanism */}
         <div className="mb-8">
           <Button variant="outline" size="sm" onClick={() => setShowHint(!showHint)} className="text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 border-amber-500/20">

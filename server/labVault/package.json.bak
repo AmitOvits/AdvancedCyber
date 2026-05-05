@@ -1,5 +1,5 @@
 {
-  "name": "juice-shop",
+  "name": "Advanced Cyber",
   "version": "9.0.0",
   "description": "Educational vulnerable app — backup artifact for CTF lab only.",
   "dependencies": {

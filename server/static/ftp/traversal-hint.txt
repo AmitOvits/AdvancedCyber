@@ -1,0 +1,4 @@
+Recon note:
+There is at least one sensitive file that is not visible in this FTP listing.
+Look for dotfiles and secret-key configuration artifacts.
+If a path is blocked in the listing, try reaching it directly.

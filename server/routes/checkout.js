@@ -234,6 +234,10 @@ export function createCheckoutRouter() {
         throw orderItemsError;
       }
 
+      if (isHacked) {
+        res.set("x-training-vulnerability", "INSECURE_DESERIALIZATION_CHECKOUT");
+      }
+
       return res.status(201).json({
         success: true,
         orderId: order.id,
