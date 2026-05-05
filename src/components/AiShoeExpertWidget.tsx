@@ -11,8 +11,7 @@ const ADMIN_WELCOME =
   "To unlock training the model, send trainig model: and then the perfect string";
 
 const RATE_WINDOW_MS = 60_000;
-const RATE_MAX_PROMPTS_PER_WINDOW = 10;
-const RATE_CRASH_TRIGGER_MIN_PROMPTS = 5;
+const RATE_MAX_PROMPTS_PER_WINDOW = 5;
 
 function formatLabAlert(statusLine: string) {
   return [
