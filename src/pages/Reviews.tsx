@@ -63,7 +63,7 @@ export default function Reviews() {
         return;
       }
       hiddenDiscoveryTriggeredRef.current = true;
-      recordLabVulnerability("JWT_QUERY_PARAMETER_TOKEN");
+      recordLabVulnerability("HIDDEN_CONSOLE_DISCOVERY");
       toast.success("Security Insight: Hidden console exposed!");
       window.alert("Victory! You exposed a hidden client-side control by removing the hidden attribute.");
     };

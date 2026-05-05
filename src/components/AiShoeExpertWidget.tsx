@@ -12,6 +12,7 @@ const ADMIN_WELCOME =
 
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX_PROMPTS_PER_WINDOW = 10;
+const RATE_CRASH_TRIGGER_MIN_PROMPTS = 5;
 
 function formatLabAlert(statusLine: string) {
   return [
@@ -59,6 +60,19 @@ export function AiShoeExpertWidget() {
       recordLabVulnerability("LLM_LARGE_CONTEXT_REQUEST");
       window.alert(
         formatLabAlert("UNBOUNDED CONSUMPTION via overloading the system"),
+      );
+    }
+  }
+
+  function maybeRecordOverconsumptionFromFailure() {
+    if (shownOverconsumptionAlert.current) {
+      return;
+    }
+    if (promptSendTimes.current.length >= RATE_CRASH_TRIGGER_MIN_PROMPTS) {
+      shownOverconsumptionAlert.current = true;
+      recordLabVulnerability("LLM_LARGE_CONTEXT_REQUEST");
+      window.alert(
+        formatLabAlert("UNBOUNDED CONSUMPTION via crash during rapid-fire requests"),
       );
     }
   }
@@ -129,6 +143,10 @@ export function AiShoeExpertWidget() {
       if (Array.isArray(data.labVulnerabilities) && data.labVulnerabilities.length > 0) {
         recordLabVulnerabilities(data.labVulnerabilities);
       }
+      if (!res.ok) {
+        maybeRecordOverconsumptionFromFailure();
+      }
+
       const reply = res.ok
         ? typeof data?.reply === "string"
           ? data.reply
@@ -139,6 +157,7 @@ export function AiShoeExpertWidget() {
       setMessages((m) => [...m, { role: "ai", text: reply }]);
       maybeShowVulnerabilityAlerts(reply);
     } catch {
+      maybeRecordOverconsumptionFromFailure();
       setMessages((m) => [...m, { role: "ai", text: "Verified Expert Advice: (network error)" }]);
     } finally {
       setBusy(false);

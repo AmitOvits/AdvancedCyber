@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "./context";
-import { recordLabVulnerability } from "@/lib/labVulnerabilityProgress";
+import { isLabVulnerabilityRecorded, recordLabVulnerability } from "@/lib/labVulnerabilityProgress";
 
 export default function AuthPage() {
   const [username, setUsername] = useState("");
@@ -72,9 +72,15 @@ export default function AuthPage() {
       return;
     }
 
-    if ((result as any).role === 'admin') {
+    const massAssignmentDetected = (result as any).role === "admin";
+    if (massAssignmentDetected) {
       recordLabVulnerability("MASS_ASSIGNMENT_ADMIN_SIGNUP");
-      alert("🚨 חידה נפתרה! 🚨\n\nמדהים! הצלחת לנצל חולשת Mass Assignment ולהירשם כמנהל מערכת ישירות מעמוד ההרשמה.");
+    }
+    if (massAssignmentDetected || isLabVulnerabilityRecorded("MASS_ASSIGNMENT_ADMIN_SIGNUP")) {
+      alert(
+        "🚨 CRITICAL VULNERABILITY EXPLOITED! 🚨\n\n" +
+          "Mass Assignment succeeded. You escalated privileges during signup and gained admin-level access.",
+      );
     }
   
     toast.success("Account created! You can sign in now.");

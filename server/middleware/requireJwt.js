@@ -16,7 +16,7 @@ export function createRequireJwt(jwtSecret) {
     try {
       req.user = jwt.verify(token, jwtSecret);
       if (queryToken) {
-        res.set("x-training-vulnerability", "JWT_QUERY_PARAMETER_TOKEN");
+        res.set("x-training-vulnerability", "HIDDEN_CONSOLE_DISCOVERY");
       }
       return next();
     } catch {
