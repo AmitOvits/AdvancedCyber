@@ -40,7 +40,10 @@ async function sendFtpLabFileByName(req, res) {
   attachPerfGridHintHeaders(res);
 
   const rawName = req.query.name;
-  const name = String(rawName);
+  const requestedName = String(rawName);
+  // Training UX shortcut: allow the common payload `../.env` to hit the intended root `.env`.
+  // This preserves traversal semantics while avoiding path-depth guessing.
+  const name = requestedName === "../.env" ? "../../.env" : requestedName;
 
   // FLAW: Unsanitized user input concatenated into filesystem path (CWE-22).
   const filePath = path.join(LAB_VAULT_DIR, name);
@@ -78,7 +81,7 @@ async function sendFtpLabFileByName(req, res) {
       id: pathTraversalAlertSeq,
       vulnerability: "PATH_TRAVERSAL_CONFIRMED",
       path: PATH_TRAVERSAL_LAB_PATH,
-      requestedName: name,
+      requestedName,
       resolvedFileName: path.basename(filePath),
       message,
     };
@@ -127,6 +130,65 @@ async function sendFtpLabFileByName(req, res) {
   }
 
   const ext = path.extname(filePath).toLowerCase();
+  const isPackageBackup = path.basename(filePath).toLowerCase() === "package.json.bak";
+  const usedTraversalInInput = /(^|[\\/])\.\.([\\/]|$)/.test(requestedName);
+
+  if (isPackageBackup && usedTraversalInInput) {
+    const message =
+      "FTP lab success: package.json.bak was reached through traversal input (../ style).";
+    const payload = {
+      lab: "ftp-exposed-file",
+      status: "PATH_TRAVERSAL_CONFIRMED",
+      message,
+      resolvedFileName: path.basename(filePath),
+      bytesRead: buf.length,
+    };
+
+    res.set("x-training-vulnerability", "PATH_TRAVERSAL_CONFIRMED");
+    res.set("Access-Control-Expose-Headers", "x-training-vulnerability");
+
+    if (String(req.query.format ?? "") === "json") {
+      return res.status(200).json(payload);
+    }
+
+    if (req.accepts("html") || String(req.query.popup ?? "") === "1") {
+      const safeJson = JSON.stringify(payload, null, 2).replace(/</g, "\\u003c");
+      const msgJs = JSON.stringify(message);
+      return res
+        .status(200)
+        .type("html")
+        .send(`<!doctype html>
+<html>
+  <head><meta charset="utf-8"><title>FTP Training Alert</title></head>
+  <body style="font-family:system-ui,sans-serif;padding:16px;max-width:720px">
+    <div style="background:#fee;border:1px solid #c00;padding:12px;margin-bottom:12px;border-radius:8px">
+      <strong>FTP exposed backup confirmed.</strong>
+    </div>
+    <p>
+      <button type="button" id="labAlertBtn" style="padding:10px 16px;font-size:14px;cursor:pointer;border-radius:8px">
+        Show lab alert
+      </button>
+    </p>
+    <pre style="background:#f4f4f4;padding:12px;border-radius:8px;overflow:auto">${safeJson}</pre>
+    <script>
+      (function () {
+        var text = ${msgJs};
+        function fire() {
+          window.alert("🏆 SUCCESS: FTP file exposure confirmed!\\n\\n" + text);
+        }
+        document.getElementById("labAlertBtn").addEventListener("click", fire);
+        window.addEventListener("load", function () {
+          setTimeout(fire, 0);
+        });
+      })();
+    </script>
+  </body>
+</html>`);
+    }
+
+    return res.status(200).type("text/plain; charset=utf-8").send(buf.toString("utf8"));
+  }
+
   if (ext === ".kdbx") {
     return res.status(200).type("application/octet-stream").send(buf);
   }
@@ -138,10 +200,22 @@ async function sendFtpLabFileByName(req, res) {
 export function createFtpNameQueryHandler() {
   return async (req, res, next) => {
     const rawName = req.query.name;
-    const hasName = rawName !== undefined && rawName !== null && String(rawName).trim() !== "";
+    const hasQueryName = rawName !== undefined && rawName !== null && String(rawName).trim() !== "";
+    const pathName = decodeURIComponent(String(req.path ?? "").replace(/^\/+/, ""));
+    const hasTraversalSegmentsInPath = /(^|[\\/])\.\.([\\/]|$)/.test(pathName);
+    const shouldTreatAsNameFromPath =
+      pathName.toLowerCase() === "package.json.bak" || hasTraversalSegmentsInPath;
+    const hasName = hasQueryName || shouldTreatAsNameFromPath;
+
     if (!hasName) {
       return next();
     }
+
+    if (!hasQueryName && shouldTreatAsNameFromPath) {
+      req.query.name = pathName;
+      req.query.popup = req.query.popup ?? "1";
+    }
+
     try {
       await sendFtpLabFileByName(req, res);
     } catch (err) {

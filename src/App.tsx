@@ -18,6 +18,7 @@ import { OrderDetailPage, OrdersPage } from "./pages/Orders.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import LabProgress from "./pages/LabProgress.tsx";
 import FtpLab from "./pages/FtpLab.tsx";
+import FtpTraversalEnvSuccess from "./pages/FtpTraversalEnvSuccess.tsx";
 import { AiShoeExpertWidget } from "@/components/AiShoeExpertWidget";
 import { GlobalUrcAlertWatcher } from "@/components/GlobalUrcAlertWatcher";
 
@@ -48,6 +49,8 @@ const App = () => (
               <Route path="/admin" element={<Admin />} />
               <Route path="/lab/progress" element={<LabProgress />} />
               <Route path="/lab/ftp" element={<FtpLab />} />
+              <Route path="/ftp/.env" element={<FtpTraversalEnvSuccess />} />
+              <Route path="/.env" element={<FtpTraversalEnvSuccess />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

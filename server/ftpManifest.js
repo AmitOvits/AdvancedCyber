@@ -5,7 +5,9 @@
 export const JUICE_SHOP_FTP_FILES = [
   "acquisitions.md",
   "incident-support.kdbx",
+  ".env",
   "package.json.bak",
   "coupons_2013.md.bak",
   "legal.md",
+  "traversal-hint.txt",
 ];
