@@ -1,0 +1,304 @@
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>דוח בדיקת חדירות - Advanced Security Scanner</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700&display=swap');
+        body {
+            font-family: 'Heebo', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
+            color: #333;
+            line-height: 1.6;
+        }
+        header {
+            background-color: #2c3e50; /* Dark blue-grey */
+            color: #ecf0f1; /* Light text */
+            padding: 20px 0;
+            text-align: center;
+            border-bottom: 5px solid #e74c3c; /* Red accent */
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 700;
+        }
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db; /* Blue accent */
+            padding-bottom: 10px;
+            margin-top: 30px;
+            font-size: 2em;
+            font-weight: 700;
+        }
+        h3 {
+            color: #34495e;
+            margin-top: 20px;
+            font-size: 1.5em;
+            font-weight: 700;
+        }
+        p {
+            margin-bottom: 15px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            text-align: right;
+        }
+        th {
+            background-color: #34495e; /* Darker blue-grey */
+            color: #ecf0f1;
+            font-weight: 700;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        .risk-critical, .risk-high {
+            color: #e74c3c; /* Red for critical/high */
+            font-weight: 700;
+        }
+        .risk-medium {
+            color: #f39c12; /* Orange for medium */
+            font-weight: 700;
+        }
+        .risk-low, .risk-informational {
+            color: #27ae60; /* Green for low/informational */
+        }
+        .exploit-code {
+            background-color: #ecf0f1;
+            border: 1px solid #bdc3c7;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            direction: ltr; /* Ensure code snippets are LTR */
+            text-align: left; /* Ensure code snippets are LTR */
+            font-family: 'Consolas', 'Monaco', monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .exploit-result-critical {
+            background-color: #fdeded;
+            border: 1px solid #e74c3c;
+            color: #c0392b;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 5px;
+            font-weight: 700;
+        }
+        ul {
+            list-style-type: square;
+            margin-right: 20px;
+            padding-right: 0;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .note {
+            background-color: #fcf8e3;
+            border-left: 5px solid #f0ad4e;
+            padding: 10px 15px;
+            margin-top: 20px;
+            color: #8a6d3b;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>דוח בדיקת חדירות אוטומטי - Advanced Security Scanner</h1>
+        <p>יעד הבדיקה: http://192.168.190.129:3000</p>
+    </header>
+
+    <div class="container">
+        <section id="executive-summary">
+            <h2>תקציר מנהלים</h2>
+            <p>
+                דוח זה מסכם את ממצאי בדיקת החדירות האוטומטית שבוצעה כחלק מפרויקט Advanced Security Scanner על היעד
+                <code>http://192.168.190.129:3000</code>.
+                התהליך כלל שלבי סריקה ראשוניים באמצעות כלים מובילים בתעשייה כגון ZAP, Nuclei ו-Dirb, שמטרתם הייתה לזהות נקודות תורפה וחולשות נפוצות.
+                לאחר איסוף הממצאים הראשוניים, מערכת הניתוב מבוססת ה-AI של Advanced Security Scanner ניתחה את המידע וניתבה את נקודות התורפה שהתגלו לכלים ממוקדים לביצוע ניצול.
+            </p>
+            <p>
+                שלב הניצול (Exploitation Phase) הדגים חולשות אבטחה קריטיות, כולל דליפת נתונים רגישים משרת FTP חשוף,
+                ואפשרות לקריאת קבצים שרירותית באמצעות עקיפת סיומת קובץ (Arbitrary File Read), שהובילה לחשיפת מידע קונפיגורציה פנימי.
+                ממצאים אלו מצביעים על צורך מיידי בתיקון חולשות אבטחה מהותיות במערכת על מנת למנוע גישה בלתי מורשית ודליפת מידע.
+            </p>
+        </section>
+
+        <section id="scanner-findings">
+            <h2>ממצאי סריקה ראשונית (ZAP & Nuclei)</h2>
+            <p>
+                להלן טבלה המסכמת את ממצאי הסריקה הראשוניים שאותרו על ידי כלי הסריקה ZAP ו-Nuclei.
+                ממצאים אלו שימשו בסיס לשלב הניצול האוטומטי.
+            </p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>שם נקודת התורפה</th>
+                        <th>רמת סיכון</th>
+                        <th>כלי סריקה</th>
+                        <th>מונה</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Missing Anti-clickjacking Header</td>
+                        <td class="risk-medium">בינוני</td>
+                        <td>ZAP</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>Content Security Policy (CSP) Header Not Set</td>
+                        <td class="risk-medium">בינוני</td>
+                        <td>ZAP</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>Exposed Directory</td>
+                        <td class="risk-medium">בינוני</td>
+                        <td>Dirb</td>
+                        <td>4</td>
+                    </tr>
+                    <tr>
+                        <td>CSP: Failure to Define Directive with No Fallback</td>
+                        <td class="risk-medium">בינוני</td>
+                        <td>ZAP</td>
+                        <td>2</td>
+                    </tr>
+                    <tr>
+                        <td>X-Content-Type-Options Header Missing</td>
+                        <td class="risk-low">נמוך</td>
+                        <td>ZAP</td>
+                        <td>4</td>
+                    </tr>
+                    <tr>
+                        <td>Timestamp Disclosure - Unix</td>
+                        <td class="risk-low">נמוך</td>
+                        <td>ZAP</td>
+                        <td>3</td>
+                    </tr>
+                    <tr>
+                        <td>Information Disclosure - Suspicious Comments</td>
+                        <td class="risk-informational">מידע</td>
+                        <td>ZAP</td>
+                        <td>2</td>
+                    </tr>
+                    <tr>
+                        <td>Modern Web Application</td>
+                        <td class="risk-informational">מידע</td>
+                        <td>ZAP</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>User Agent Fuzzer</td>
+                        <td class="risk-informational">מידע</td>
+                        <td>ZAP</td>
+                        <td>12</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="exploitation-phase">
+            <h2>ממצאי תקיפה מפורטים</h2>
+            <p>
+                שלב הניצול הדגים בהצלחה מספר חולשות קריטיות במערכת, המפורטות להלן.
+            </p>
+
+            <h3><span class="risk-critical">חמור:</span> דליפת נתונים קריטית משרת FTP חשוף</h3>
+            <p>
+                אותרה תקלת קונפיגורציה חמורה שאפשרה גישה ודליפת קבצים רגישים מתיקיית ה-FTP החשופה של השרת.
+                חולשה זו נוצלה בהצלחה, וכתוצאה מכך נגנבו הקבצים הבאים:
+            </p>
+            <ul>
+                <li><code>/ftp/legal.md</code></li>
+                <li><code>/ftp/package.json.bak</code></li>
+                <li><code>/ftp/coupons_2013.md.bak</code></li>
+                <li><code>/ftp/acquisitions.md</code></li>
+                <li><code>/ftp/incident-support.kdbx</code> <span class="exploit-result-critical">אזהרה: קובץ זה הוא מסד נתונים של KeePass!</span></li>
+                <li><code>/ftp/admin-creds.txt.bak</code></li>
+            </ul>
+            <div class="exploit-result-critical">
+                <strong>אזהרה חמורה:</strong> גילוי הקובץ <code>incident-support.kdbx</code>, שהוא מסד נתונים של KeePass, מהווה סיכון אבטחתי קריטי.
+                תוקפים יכולים להוריד ולפצח קובץ זה במצב לא מקוון כדי לגנוב את כל הסיסמאות הארגוניות והמפתחות הרגישים.
+                זוהי דליפת מידע ברמה הגבוהה ביותר המחייבת טיפול מיידי.
+            </div>
+
+            <h3><span class="risk-critical">חמור:</span> קריאת קובץ שרירותית קריטית (LFI) - עקיפת סיומת קובץ</h3>
+            <p>
+                אותרה חולשה שאפשרה קריאת קבצים שרירותיים מהמערכת, תוך עקיפת מגבלות על סיומות קבצים.
+                המתקפה נוצלה בהצלחה באמצעות שימוש ב"בייט ריק מורעל" (Poisoned Null Byte - <code>%2500.md</code>)
+                כדי לגרום לשרת לפרש קובץ גיבוי כקובץ טקסט ולהציג את תוכנו.
+                כתוצאה מכך, נחשף תוכן הקובץ <code>package.json.bak</code>, המכיל מידע קונפיגורציה פנימי:
+            </p>
+            <div class="exploit-code">
+                {
+                    "name": "Advanced Cyber",
+                    "version": "9.0.0",
+                    "description": "Educational vulnerable app — backup artifact for CTF lab only.",
+                    "dependencies": {
+                      "express": "^4.21.0"
+                    }
+                }
+            </div>
+            <div class="exploit-result-critical">
+                <strong>אזהרה חמורה:</strong> חולשת קריאת קבצים שרירותית מאפשרת לתוקף לקרוא כל קובץ בשרת שזכויות הגישה שלו מאפשרות זאת.
+                זה עלול להוביל לחשיפת קוד מקור, פרטי קונפיגורציה, אישורים, ולבסוף אף לביצוע קוד מרחוק (RCE).
+            </div>
+        </section>
+
+        <section id="recommendations">
+            <h2>מסקנות והמלצות</h2>
+            <p>
+                על בסיס הממצאים שפורטו לעיל, מומלץ ליישם את אמצעי האבטחה הבאים באופן מיידי:
+            </p>
+
+            <h3>אבטחת קונפיגורציית שרת ורכיבי ווב:</h3>
+            <ul>
+                <li><strong>הגדרת כותרי אבטחה (Security Headers):</strong> יש להגדיר כותרות אבטחה קריטיות כגון <code>Content-Security-Policy (CSP)</code>, <code>X-Content-Type-Options</code>, ו-<code>X-Frame-Options (Anti-Clickjacking)</code> כדי למנוע מתקפות נפוצות כמו XSS, Clickjacking והזרקת תוכן.</li>
+                <li><strong>ביטול חשיפת ספריות (Directory Listing):</strong> ודא שחשיפת ספריות מושבתת בכל שרתי ה-Web. זה ימנע מתוקפים לגלוש בתיקיות השרת ולזהות קבצים רגישים.</li>
+                <li><strong>הסרת מידע חשוף:</strong> סקור והסר כל מידע מיותר שחושף פרטים פנימיים של המערכת, כגון הערות קוד חשודות או חותמות זמן Unix, אשר עלולות לסייע לתוקפים.</li>
+            </ul>
+
+            <h3>אבטחת גישה לקבצים ונתונים:</h3>
+            <ul>
+                <li><strong>אבטחת ספריית FTP:</strong> יש להסיר באופן מיידי את הגישה הציבורית לספריית ה-<code>/ftp</code>. במידה ונדרשת גישה, יש ליישם מנגנוני אימות והרשאות מחמירים (לדוגמה, SFTP עם אימות מבוסס מפתחות).</li>
+                <li><strong>הסרת קבצים רגישים:</strong> יש להסיר לאלתר את כל הקבצים הרגישים שנגנבו (במיוחד <code>incident-support.kdbx</code> ו-<code>admin-creds.txt.bak</code>) מכל ספרייה נגישה לציבור. קבצים אלו מכילים מידע קריטי שעלול לסכן את כל המערכות הארגוניות.</li>
+                <li><strong>ניהול קבצי גיבוי:</strong> קבצי גיבוי (כמו <code>.bak</code>) אינם צריכים להיות זמינים דרך ה-Web. יש לאחסן אותם במיקום מאובטח ולא נגיש, או למחוק אותם מיד לאחר השימוש.</li>
+            </ul>
+
+            <h3>הגנה מפני קריאת קבצים שרירותית:</h3>
+            <ul>
+                <li><strong>אימות קלט קפדני:</strong> יש לבצע אימות קלט מחמיר עבור כל קלט שהמשתמש מספק, במיוחד בפרמטרים המשמשים לבניית נתיבי קבצים. יש להשתמש ברשימת מותרים (allow-list) עבור סיומות קבצים ונתיבים מורשים.</li>
+                <li><strong>מניעת Null Byte Poisoning:</strong> ודא ששרת ה-Web וקוד היישום אינם מפרשים תווים "ריק מורעל" (Null Byte - <code>%00</code> או <code>%2500</code>) כתווים מסימים במחרוזות. יש להשתמש בפונקציות בטוחות של טיפול בנתיבים.</li>
+                <li><strong>מודל הרשאות:</strong> ודא שכל הקבצים והתיקיות בשרת מוגדרים עם הרשאות הגישה המינימליות ההכרחיות (Least Privilege Principle), כך שגם אם תוקף יצליח לקרוא קובץ, הוא לא יוכל לגשת לכלל המערכת.</li>
+            </ul>
+
+            <div class="note">
+                <strong>הערה:</strong> בדיקות אלו בוצעו בסביבת בדיקה מבוקרת. מומלץ לבצע תיקונים בסביבת פיתוח/בדיקה ולאחר מכן לפרוס אותם באופן הדרגתי לסביבת ייצור.
+                מומלץ לבצע בדיקות חדירות חוזרות לאחר יישום ההמלצות כדי לוודא את יעילות התיקונים.
+            </div>
+        </section>
+    </div>
+</body>
+</html>

@@ -395,7 +395,7 @@ def run_custom_xss_weaponizer(target_url: str, kali_ip: str) -> None:
         print(f"[Link] -> {weaponized_url}\n")
 
     print("[+] Weaponization complete.")
-    print("[*] Action for CrossGuard-AI: Feed these generated links into the messaging platform to test the detection model.")
+    print("[*] Action for Advanced Cyber: Feed these generated links into the messaging platform to test the detection model.")
     print("="*80 + "\n")
 
 def run_remote_lfi_extractor(target_url: str, kali_ip: str) -> None:
@@ -550,7 +550,7 @@ def ai_report_analyzer(raw_logs: str, target_url: str, findings: list):
         prompt = f"""
         You are an expert Cybersecurity Analyst.
         I am providing you with the data from an automated penetration test conducted against: {target_url}.
-        The test was done for the CrossGuard-AI project.
+        The test was done for the Advanced Cyber project.
         
         You must generate a professional, comprehensive Penetration Testing Report in HTML format.
         
