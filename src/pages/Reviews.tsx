@@ -30,6 +30,8 @@ function Stars({ rating }: { rating: number }) {
 export default function Reviews() {
   const queryClient = useQueryClient();
   const logContainerRef = useRef<HTMLDivElement>(null);
+  const hiddenConsoleRef = useRef<HTMLDivElement>(null);
+  const hiddenDiscoveryTriggeredRef = useRef(false);
   
   // --- מצבי סריקה (Real Probing States) ---
   // In training mode, surface the "hidden" asset-discovery console; otherwise keep it out of the UI.
@@ -45,6 +47,41 @@ export default function Reviews() {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
     }
   }, [scanLogs]);
+
+  useEffect(() => {
+    if (!isTrainingModeEnabled()) {
+      return;
+    }
+
+    const target = hiddenConsoleRef.current;
+    if (!target) {
+      return;
+    }
+
+    const triggerHiddenDiscovery = () => {
+      if (hiddenDiscoveryTriggeredRef.current) {
+        return;
+      }
+      hiddenDiscoveryTriggeredRef.current = true;
+      recordLabVulnerability("JWT_QUERY_PARAMETER_TOKEN");
+      toast.success("Security Insight: Hidden console exposed!");
+      window.alert("Victory! You exposed a hidden client-side control by removing the hidden attribute.");
+    };
+
+    const observer = new MutationObserver(() => {
+      if (!target.hasAttribute("hidden")) {
+        triggerHiddenDiscovery();
+      }
+    });
+
+    observer.observe(target, { attributes: true, attributeFilter: ["hidden"] });
+
+    if (!target.hasAttribute("hidden")) {
+      triggerHiddenDiscovery();
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   const startNetworkScan = async () => {
     setIsScanning(true);
@@ -157,7 +194,7 @@ export default function Reviews() {
         </motion.div>
 
         {/* --- כלי סריקת רשת אמיתי (Recon Tool) --- */}
-        <div hidden={isScannerHidden} className="mb-10 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl">
+        <div ref={hiddenConsoleRef} hidden={true} className="mb-10 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl">
           <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/80 px-4 py-2">
             <div className="flex items-center gap-2">
               <Terminal className="h-4 w-4 text-emerald-500" />
