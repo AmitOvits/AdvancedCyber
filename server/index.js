@@ -1,7 +1,10 @@
 import "dotenv/config";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import serveIndex from "serve-index";
 import { getJwtSecret } from "./config/auth.js";
 import { assertTrainingModeSafeToRun, isTrainingModeEnabled } from "./config/trainingMode.js";
 import { createApiErrorHandler, apiNotFound } from "./middleware/errorHandler.js";
@@ -11,15 +14,19 @@ import { createCheckoutRouter } from "./routes/checkout.js";
 import { createDemoAuthRouter } from "./routes/demoAuth.js";
 import {
   createDemoCatalogRouter,
-  createFtpLabRouter,
+  createFtpNameQueryHandler,
   getLatestPathTraversalAlert,
   getLatestUrcAlert,
 } from "./routes/demoCatalog.js";
+import { createFtpJsonIndexMiddleware, createFtpSlashRedirect } from "./routes/ftpIndex.js";
 import { attachPerfGridHintHeaders } from "./labHints.js";
 import { createReviewsRouter } from "./routes/reviews.js"; // המאובטח
 import { createReviewsV1Router } from "./routes/reviews_v1.js"; // הפרוץ
 
 assertTrainingModeSafeToRun();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const FTP_STATIC_ROOT = path.join(__dirname, "static", "ftp");
 
 const app = express();
 app.disable("x-powered-by");
@@ -39,7 +46,13 @@ const port = Number.parseInt(process.env.PORT ?? "3001", 10);
 const jwtSecret = getJwtSecret();
 const requireJwt = createRequireJwt(jwtSecret);
 
-app.use("/ftp", createFtpLabRouter());
+// /ftp — Juice Shop–style directory listing (serve-index) + path traversal ?name= on labVault
+app.use("/ftp", createFtpJsonIndexMiddleware());
+app.use("/ftp", createFtpSlashRedirect());
+app.use("/ftp", createFtpNameQueryHandler());
+app.use("/ftp", express.static(FTP_STATIC_ROOT, { index: false }));
+app.use("/ftp", serveIndex(FTP_STATIC_ROOT, { icons: true }));
+
 app.use("/api", createAiExpertRouter());
 app.use("/api", createCheckoutRouter());
 // 1. הגרסה המודרנית (v2) - הגנה רשתית קשיחה

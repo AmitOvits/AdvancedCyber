@@ -35,7 +35,6 @@ export default function Reviews() {
   
   // --- מצבי סריקה (Real Probing States) ---
   // In training mode, surface the "hidden" asset-discovery console; otherwise keep it out of the UI.
-  const isScannerHidden = !isTrainingModeEnabled();
   const [isScanning, setIsScanning] = useState(false);
   const [discoveredEndpoint, setDiscoveredEndpoint] = useState<string | null>(null);
   const [useLegacyApi, setUseLegacyApi] = useState(false);
