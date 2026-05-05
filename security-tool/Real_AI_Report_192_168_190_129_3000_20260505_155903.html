@@ -1,0 +1,237 @@
+
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>דוח בדיקת חדירה - CrossGuard-AI</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+            text-align: right;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2, h3 {
+            color: #2c3e50; /* Dark header color */
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+        h1 {
+            font-size: 2.2em;
+            text-align: center;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 15px;
+        }
+        h2 {
+            font-size: 1.8em;
+        }
+        h3 {
+            font-size: 1.4em;
+            border-bottom: 1px solid #ddd;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: #fff;
+            box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px 15px;
+            text-align: right;
+        }
+        th {
+            background-color: #34495e; /* Dark header background */
+            color: #ecf0f1; /* Light text for header */
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        .critical-text {
+            color: #e74c3c; /* Red color for critical findings */
+            font-weight: bold;
+        }
+        .medium-text {
+            color: #f39c12; /* Orange for medium findings */
+            font-weight: bold;
+        }
+        .low-text {
+            color: #2980b9; /* Blue for low findings */
+        }
+        .info-text {
+            color: #7f8c8d; /* Grey for informational findings */
+        }
+        ul {
+            list-style-type: square;
+            padding-right: 20px;
+        }
+        p {
+            margin-bottom: 1em;
+        }
+        .code-block {
+            background-color: #eee;
+            border-left: 4px solid #3498db;
+            padding: 10px 15px;
+            margin: 15px 0;
+            overflow-x: auto;
+            direction: ltr; /* Ensure code blocks display LTR */
+            text-align: left;
+            font-family: 'Consolas', 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>דוח בדיקת חדירה אוטומטית<br>פרויקט CrossGuard-AI</h1>
+        <p><strong>תאריך הדוח:</strong> 22 במאי 2024</p>
+        <p><strong>יעד הבדיקה:</strong> <a href="http://192.168.190.129:3000">http://192.168.190.129:3000</a></p>
+
+        <section>
+            <h2>תקציר מנהלים</h2>
+            <p>בדיקת חדירה אוטומטית בוצעה כנגד היישום בכתובת http://192.168.190.129:3000 עבור פרויקט CrossGuard-AI. התהליך כלל הפעלת סורקים אוטומטיים מתקדמים (כגון ZAP, Nuclei ו-Dirb) שזיהו חולשות ראשוניות במערכת. לאחר מכן, הנתונים הוזנו למנוע ניתוב מבוסס AI שניתח את הממצאים והפעיל כלים ייעודיים לניצול פגיעויות שנמצאו.</p>
+            <p>במהלך שלב הניצול, זוהתה ונוצלה פרצת <strong>דליפת נתונים קריטית</strong>, שכללה חילוץ קבצים ארגוניים רגישים מפורטל FTP חשוף. בין הקבצים שנגנבו, נמצא <strong>בסיס נתונים של KeePass</strong>, המכיל סיסמאות ופרטי כניסה רגישים, שחשיפתו מהווה סיכון אבטחה חמור ועלולה להוביל לפשרה נרחבת של המערכות הארגוניות. בנוסף, זוהו מספר חולשות ברמת סיכון בינונית ונמוכה הקשורות לכותרות אבטחה חסרות וחשיפת מידע.</p>
+        </section>
+
+        <section>
+            <h2>ממצאי סריקה ראשונית (ZAP & Nuclei)</h2>
+            <p>להלן סיכום הממצאים העיקריים שזוהו בשלב הסריקה האוטומטית על ידי ZAP ו-Dirb (סורק Nuclei לא זיהה ממצאים ספציפיים עבור היעד).</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>פגיעות</th>
+                        <th>רמת סיכון</th>
+                        <th>מקור</th>
+                        <th>ספירה</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>ספרייה חשופה</td>
+                        <td class="medium-text">בינוני</td>
+                        <td>Dirb</td>
+                        <td>4</td>
+                    </tr>
+                    <tr>
+                        <td>כותרת Anti-clickjacking חסרה</td>
+                        <td class="medium-text">בינוני</td>
+                        <td>ZAP</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>כותרת CSP (Content Security Policy) לא מוגדרת</td>
+                        <td class="medium-text">בינוני</td>
+                        <td>ZAP</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>CSP: כשל בהגדרת הוראה ללא גיבוי</td>
+                        <td class="medium-text">בינוני</td>
+                        <td>ZAP</td>
+                        <td>2</td>
+                    </tr>
+                    <tr>
+                        <td>כותרת X-Content-Type-Options חסרה</td>
+                        <td class="low-text">נמוך</td>
+                        <td>ZAP</td>
+                        <td>4</td>
+                    </tr>
+                    <tr>
+                        <td>חשיפת חותמת זמן - Unix</td>
+                        <td class="low-text">נמוך</td>
+                        <td>ZAP</td>
+                        <td>3</td>
+                    </tr>
+                    <tr>
+                        <td>חשיפת מידע - הערות חשודות</td>
+                        <td class="info-text">מידע</td>
+                        <td>ZAP</td>
+                        <td>2</td>
+                    </tr>
+                    <tr>
+                        <td>יישום ווב מודרני</td>
+                        <td class="info-text">מידע</td>
+                        <td>ZAP</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>משבש User Agent</td>
+                        <td class="info-text">מידע</td>
+                        <td>ZAP</td>
+                        <td>12</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <h2>ממצאי תקיפה מפורטים</h2>
+
+            <h3>דליפת נתונים קריטית מפורטל FTP חשוף</h3>
+            <p>במהלך שלב הניצול, זוהתה ספריית FTP חשופה בכתובת <code class="code-block">http://192.168.190.129:3000/ftp/</code>. הכלי האוטומטי <code>run_ftp_data_pillager</code> ניצל חולשה זו כדי לגשת ולחלץ קבצים רגישים מהשרת ללא צורך באימות.</p>
+            <p class="critical-text"><strong>חולשה זו מאפשרת לתוקף גישה ישירה לקבצים פנימיים ורגישים של הארגון.</strong></p>
+            <p><strong>הקבצים שחולצו כוללים:</strong></p>
+            <ul>
+                <li><code>coupons_2013.md.bak</code></li>
+                <li><code>legal.md</code></li>
+                <li><strong class="critical-text"><code>incident-support.kdbx</code> (בסיס נתונים של KeePass)</strong></li>
+                <li><code>package.json.bak</code></li>
+                <li><code>admin-creds.txt.bak</code></li>
+                <li><code>acquisitions.md</code></li>
+            </ul>
+            <p class="critical-text"><strong>ניתוח:</strong> קובץ <code>incident-support.kdbx</code> הוא בסיס נתונים של KeePass. קובץ זה מכיל בדרך כלל סיסמאות ופרטי כניסה רגישים רבים למערכות שונות. חשיפתו מאפשרת לתוקף להוריד אותו ולנסות לפרוץ אותו במצב לא מקוון (offline), מה שעלול להוביל לגניבת <strong>כל הסיסמאות הארגוניות</strong> הכלולות בו ולפריצה נרחבת למערכות הארגון. קיום קבצי גיבוי (<code>.bak</code>) וקבצי אדמין (<code>admin-creds.txt.bak</code>) חשופים מגביר אף הוא את הסיכון לדליפת מידע חשובה.</p>
+        </section>
+
+        <section>
+            <h2>מסקנות והמלצות</h2>
+            <p>על מנת למנוע ניצול עתידי של הפגיעויות שזוהו, אנו ממליצים על היישום המיידי של ההמלצות הבאות:</p>
+
+            <h3>1. אבטחת ספריות חשופות וניהול קבצים רגישים</h3>
+            <ul>
+                <li><strong class="critical-text">הסרה מיידית:</strong> יש להסיר באופן מיידי קבצים רגישים מכל ספריות נגישות לציבור, ובמיוחד את קובץ ה-KeePass (<code>incident-support.kdbx</code>) וקבצי גיבוי או פרטי כניסה אחרים (<code>admin-creds.txt.bak</code>, <code>package.json.bak</code>).</li>
+                <li><strong>בקרות גישה:</strong> יש ליישם בקרות גישה מחמירות (כגון אימות והרשאות) על כל ספריה המכילה מידע פנימי, גם אם היא לא אמורה להיות חשופה ישירות.</li>
+                <li><strong>בדיקת נחיצות:</strong> יש לבדוק האם פורטל ה-FTP נחוץ כלל לגישה ציבורית. אם לא, יש לחסום את הגישה אליו מבחוץ לחלוטין. אם הוא נחוץ, יש לאבטח אותו באמצעות אימות חזק, הרשאות קבצים מינימליות והגבלת גישה מכתובות IP ידועות בלבד.</li>
+                <li><strong>נהלי גיבוי:</strong> יש לבחון את נהלי הגיבוי ולוודא שקבצי גיבוי ישנים ולא רלוונטיים נמחקים או מאוחסנים בצורה מאובטחת במיוחד שאינה נגישה מהווב.</li>
+            </ul>
+
+            <h3>2. יישום כותרות אבטחה (Security Headers)</h3>
+            <p>הגדרת כותרות אבטחה מתאימות תשפר משמעותית את הגנת היישום מפני התקפות וקטוריות נפוצות:</p>
+            <ul>
+                <li><strong><code>X-Content-Type-Options</code>:</strong> יש להגדיר כותרת <code>X-Content-Type-Options: nosniff</code> כדי למנוע דפדפנים מנחשים סוגי MIME בצורה שגויה, מה שעלול להוביל להתקפות XSS.</li>
+                <li><strong><code>X-Frame-Options</code> / <code>Content-Security-Policy: frame-ancestors</code>:</strong> יש להגדיר כותרת <code>X-Frame-Options: SAMEORIGIN</code> או <code>DENY</code> כדי למנוע התקפות Clickjacking שבהן תוקפים משבצים את האתר במסגרת (iframe) באתר זדוני. לחלופין, ניתן להשתמש בהוראה <code>frame-ancestors</code> במדיניות CSP.</li>
+                <li><strong><code>Content-Security-Policy (CSP)</code>:</strong> יש ליישם מדיניות אבטחת תוכן (CSP) מחמירה כדי להפחית את הסיכון להתקפות XSS והזרקת נתונים אחרות על ידי הגדרת מקורות מורשים לטעינת משאבים. יש להקפיד להגדיר את כל ההוראות הנדרשות ולכלול fallback מתאים.</li>
+            </ul>
+
+            <h3>3. סקירות אבטחה שוטפות</h3>
+            <ul>
+                <li><strong>בדיקות קבועות:</strong> יש לבצע סקירות אבטחה קבועות (גם אוטומטיות וגם ידניות) כדי לזהות ולתקן פגיעויות לפני ניצולן.</li>
+                <li><strong>ניהול תיקונים:</strong> יש ליישם תהליכי ניהול תיקונים (patch management) יעילים כדי לוודא שכל התוכנות, הספריות ותלויות הצד השלישי מעודכנות לגרסאות האחרונות הידועות כמאובטחות.</li>
+            </ul>
+        </section>
+
+        <p style="text-align: center; margin-top: 40px; font-size: 0.9em; color: #7f8c8d;">
+            &copy; 2024 CrossGuard-AI. כל הזכויות שמורות.
+        </p>
+    </div>
+</body>
+</html>

