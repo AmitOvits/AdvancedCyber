@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/features/auth";
+import { recordLabVulnerabilities, recordLabVulnerability } from "@/lib/labVulnerabilityProgress";
 
 type ChatMessage = { role: "user" | "ai"; text: string };
 
@@ -11,6 +12,7 @@ const ADMIN_WELCOME =
 
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX_PROMPTS_PER_WINDOW = 10;
+const RATE_CRASH_TRIGGER_MIN_PROMPTS = 5;
 
 function formatLabAlert(statusLine: string) {
   return [
@@ -33,6 +35,7 @@ export function AiShoeExpertWidget() {
   const [messages, setMessages] = useState<ChatMessage[]>([{ role: "ai", text: USER_WELCOME }]);
   const shownSoleadminAlert = useRef(false);
   const shownTrainingPoisonAlert = useRef(false);
+  const shownTrainingSavedAlert = useRef(false);
   const shownOverconsumptionAlert = useRef(false);
   const promptSendTimes = useRef<number[]>([]);
 
@@ -54,8 +57,22 @@ export function AiShoeExpertWidget() {
       recent.length >= RATE_MAX_PROMPTS_PER_WINDOW
     ) {
       shownOverconsumptionAlert.current = true;
+      recordLabVulnerability("LLM_LARGE_CONTEXT_REQUEST");
       window.alert(
         formatLabAlert("UNBOUNDED CONSUMPTION via overloading the system"),
+      );
+    }
+  }
+
+  function maybeRecordOverconsumptionFromFailure() {
+    if (shownOverconsumptionAlert.current) {
+      return;
+    }
+    if (promptSendTimes.current.length >= RATE_CRASH_TRIGGER_MIN_PROMPTS) {
+      shownOverconsumptionAlert.current = true;
+      recordLabVulnerability("LLM_LARGE_CONTEXT_REQUEST");
+      window.alert(
+        formatLabAlert("UNBOUNDED CONSUMPTION via crash during rapid-fire requests"),
       );
     }
   }
@@ -63,6 +80,7 @@ export function AiShoeExpertWidget() {
   function maybeShowVulnerabilityAlerts(reply: string) {
     if (!shownSoleadminAlert.current && /soleadmin/i.test(reply)) {
       shownSoleadminAlert.current = true;
+      recordLabVulnerability("LLM_PROMPT_OVERRIDE_ATTEMPT");
       window.alert(
         formatLabAlert("ADMIN NAME FOUND via prompt injection and jailbreak"),
       );
@@ -73,7 +91,16 @@ export function AiShoeExpertWidget() {
       reply.trim() === "now you can train the model"
     ) {
       shownTrainingPoisonAlert.current = true;
+      recordLabVulnerability("LLM_SYSTEM_PROMPT_EXFILTRATION");
       window.alert(formatLabAlert("MODEL TRAINING POISONING"));
+    }
+    if (
+      isAdmin &&
+      !shownTrainingSavedAlert.current &&
+      reply.includes("New instructions are saved for this server session")
+    ) {
+      shownTrainingSavedAlert.current = true;
+      recordLabVulnerability("LLM_PROMPT_OVERRIDE_ATTEMPT");
     }
   }
 
@@ -108,7 +135,18 @@ export function AiShoeExpertWidget() {
         headers,
         body: JSON.stringify(body),
       });
-      const data = await res.json().catch(() => ({}));
+      const data = (await res.json().catch(() => ({}))) as {
+        reply?: string;
+        labVulnerabilities?: string[];
+        error?: string;
+      };
+      if (Array.isArray(data.labVulnerabilities) && data.labVulnerabilities.length > 0) {
+        recordLabVulnerabilities(data.labVulnerabilities);
+      }
+      if (!res.ok) {
+        maybeRecordOverconsumptionFromFailure();
+      }
+
       const reply = res.ok
         ? typeof data?.reply === "string"
           ? data.reply
@@ -119,6 +157,7 @@ export function AiShoeExpertWidget() {
       setMessages((m) => [...m, { role: "ai", text: reply }]);
       maybeShowVulnerabilityAlerts(reply);
     } catch {
+      maybeRecordOverconsumptionFromFailure();
       setMessages((m) => [...m, { role: "ai", text: "Verified Expert Advice: (network error)" }]);
     } finally {
       setBusy(false);
