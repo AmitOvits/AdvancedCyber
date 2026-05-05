@@ -29,6 +29,6 @@ export function attachPerfGridHintHeaders(res) {
   res.set("X-Path-Traversal-Lab-Path", PATH_TRAVERSAL_LAB_PATH);
   res.set(
     "X-Path-Traversal-Lab-Hint",
-    "GET /ftp?name= file segment (no token). Traversal under server/labVault - OWASP A01 (training).",
+    "Try path '/ftp'.",
   );
 }
