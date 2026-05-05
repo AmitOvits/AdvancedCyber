@@ -35,6 +35,25 @@ export async function fetchOrders() {
   return (data ?? []) as OrderRow[];
 }
 
+async function fetchOrdersFromInsecureApi(): Promise<OrderRow[]> {
+  const response = await fetch("/api/v1/orders");
+  if (!response.ok) {
+    throw new Error(`Failed to load insecure orders source (${response.status})`);
+  }
+  const payload = (await response.json()) as {
+    orders?: Array<{ id?: string; userEmail?: string; total?: number }>;
+  };
+  const now = new Date().toISOString();
+  return (payload.orders ?? []).map((order, index) => ({
+    id: String(order.id ?? `insecure-order-${index + 1}`),
+    user_id: order.userEmail ?? null,
+    total: Number(order.total ?? 0),
+    status: "pending",
+    shipping_address: null,
+    created_at: now,
+  })) as OrderRow[];
+}
+
 export async function fetchOrderItems(orderId: string) {
   const { data, error } = await supabase
     .from("order_items")
@@ -66,8 +85,15 @@ export async function fetchOrderByNumberInsecure(orderNumber: number) {
     throw new Error("Invalid order number");
   }
 
-  const allOrders = await fetchOrders();
-  const order = allOrders[orderNumber - 1];
+  let allOrders = await fetchOrders().catch(() => []);
+  let order = allOrders[orderNumber - 1];
+
+  // Fallback keeps BOLA deterministic in training setups where DB policies
+  // block broad reads for newer users.
+  if (!order) {
+    allOrders = await fetchOrdersFromInsecureApi();
+    order = allOrders[orderNumber - 1];
+  }
 
   if (!order) {
     throw new Error("Order not found");

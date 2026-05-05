@@ -164,7 +164,13 @@ export function OrderDetailPage() {
       return;
     }
 
-    if (!order.user_id || order.user_id === user.id) {
+    const owner = String(order.user_id ?? "").trim().toLowerCase();
+    const currentUserId = String(user.id ?? "").trim().toLowerCase();
+    const currentUserEmail = String(user.email ?? "").trim().toLowerCase();
+    const isOwnedByCurrentUser =
+      owner.length > 0 && (owner === currentUserId || (currentUserEmail.length > 0 && owner === currentUserEmail));
+
+    if (isOwnedByCurrentUser) {
       return;
     }
 
@@ -173,12 +179,13 @@ export function OrderDetailPage() {
     }
 
     alertedOrderIdRef.current = order.id;
+    const victimOwner = String(order.user_id ?? "(unknown owner)");
     recordLabVulnerability("BOLA_IDOR_ORDER");
     alert(
       `🚨 BOLA VULNERABILITY EXPLOITED! 🚨\n\n` +
         `You accessed another user's order via URL tampering.\n` +
         `Current URL ID: ${numericOrderNumber}\n` +
-        `Victim user_id: ${order.user_id}\n\n` +
+        `Victim user_id: ${victimOwner}\n\n` +
         `This page intentionally skips ownership authorization for training.`,
     );
     toast.error("BOLA detected: unauthorized order access succeeded", { duration: 9000 });
